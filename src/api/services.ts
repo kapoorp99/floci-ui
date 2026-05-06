@@ -958,6 +958,32 @@ export async function deleteSqsMessage(queueUrl: string, receiptHandle: string, 
     await flociQueryAction({Action: 'DeleteMessage', QueueUrl: queueUrl, ReceiptHandle: receiptHandle}, signal)
 }
 
+export interface SqsTag { key: string; value: string }
+
+export async function getSqsQueueTags(queueUrl: string, signal?: AbortSignal): Promise<SqsTag[]> {
+    const xml = await flociQueryAction({Action: 'ListQueueTags', QueueUrl: queueUrl}, signal)
+    const doc = parseXml(xml)
+    return Array.from(doc.querySelectorAll('Tag')).map((el) => ({
+        key: el.querySelector('Key')?.textContent ?? '',
+        value: el.querySelector('Value')?.textContent ?? '',
+    })).filter((t) => t.key)
+}
+
+export async function setSqsQueueTags(queueUrl: string, tags: SqsTag[], signal?: AbortSignal): Promise<void> {
+    const params: Record<string, string> = {Action: 'TagQueue', QueueUrl: queueUrl}
+    tags.forEach(({key, value}, i) => {
+        params[`Tags.member.${i + 1}.Key`] = key
+        params[`Tags.member.${i + 1}.Value`] = value
+    })
+    await flociQueryAction(params, signal)
+}
+
+export async function removeSqsQueueTags(queueUrl: string, keys: string[], signal?: AbortSignal): Promise<void> {
+    const params: Record<string, string> = {Action: 'UntagQueue', QueueUrl: queueUrl}
+    keys.forEach((key, i) => { params[`TagKeys.member.${i + 1}`] = key })
+    await flociQueryAction(params, signal)
+}
+
 // ─── DynamoDB detail ─────────────────────────────────────────────────────────
 
 export type DynamoDbItem = Record<string, unknown>
@@ -1170,4 +1196,42 @@ export async function publishSnsMessage(
     const xml = await flociQueryAction(params, signal)
     const doc = parseXml(xml)
     return textContent(doc, 'MessageId') ?? ''
+}
+
+export async function getSnsTopicAttributes(topicArn: string, signal?: AbortSignal): Promise<Record<string, string>> {
+    const xml = await flociQueryAction({Action: 'GetTopicAttributes', TopicArn: topicArn}, signal)
+    const doc = parseXml(xml)
+    const result: Record<string, string> = {}
+    doc.querySelectorAll('entry').forEach((entry) => {
+        const key = entry.querySelector('key')?.textContent ?? ''
+        const value = entry.querySelector('value')?.textContent ?? ''
+        if (key) result[key] = value
+    })
+    return result
+}
+
+export interface SnsTag { key: string; value: string }
+
+export async function listSnsTopicTags(topicArn: string, signal?: AbortSignal): Promise<SnsTag[]> {
+    const xml = await flociQueryAction({Action: 'ListTagsForResource', ResourceArn: topicArn}, signal)
+    const doc = parseXml(xml)
+    return Array.from(doc.querySelectorAll('Tag')).map((el) => ({
+        key: el.querySelector('Key')?.textContent ?? '',
+        value: el.querySelector('Value')?.textContent ?? '',
+    })).filter((t) => t.key)
+}
+
+export async function setSnsTopicTags(topicArn: string, tags: SnsTag[], signal?: AbortSignal): Promise<void> {
+    const params: Record<string, string> = {Action: 'TagResource', ResourceArn: topicArn}
+    tags.forEach(({key, value}, i) => {
+        params[`Tags.member.${i + 1}.Key`] = key
+        params[`Tags.member.${i + 1}.Value`] = value
+    })
+    await flociQueryAction(params, signal)
+}
+
+export async function removeSnsTopicTags(topicArn: string, keys: string[], signal?: AbortSignal): Promise<void> {
+    const params: Record<string, string> = {Action: 'UntagResource', ResourceArn: topicArn}
+    keys.forEach((key, i) => { params[`TagKeys.member.${i + 1}`] = key })
+    await flociQueryAction(params, signal)
 }

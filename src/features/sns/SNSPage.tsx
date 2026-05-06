@@ -9,83 +9,85 @@ import {
     subscribeToTopic,
     unsubscribeFromTopic,
     publishSnsMessage,
+    getSnsTopicAttributes,
+    listSnsTopicTags,
+    setSnsTopicTags,
+    removeSnsTopicTags,
     type SnsTopic,
     type SnsSubscription,
+    type SnsTag,
 } from '@/api/services'
 
-// ─── Create Topic Modal ───────────────────────────────────────────────────────
+// ─── Create Topic (inline form in sidebar) ────────────────────────────────────
 
-function CreateTopicModal({onClose, onCreate}: { onClose: () => void; onCreate: (name: string, fifo: boolean) => void }) {
+function CreateTopicBar({onCreate}: { onCreate: (name: string, fifo: boolean) => Promise<void> }) {
+    const [open, setOpen] = useState(false)
     const [name, setName] = useState('')
     const [fifo, setFifo] = useState(false)
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
 
-    const effectiveName = fifo && !name.endsWith('.fifo') ? `${name}.fifo` : name
+    const effectiveName = fifo && name && !name.endsWith('.fifo') ? `${name}.fifo` : name
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         const trimmed = effectiveName.trim()
-        if (!trimmed) return setErr('Topic name is required')
-        if (!/^[A-Za-z0-9_-]+(?:\.fifo)?$/.test(trimmed)) return setErr('Name may only contain letters, digits, - and _')
+        if (!trimmed) return setErr('Name required')
+        if (!/^[A-Za-z0-9_-]+(?:\.fifo)?$/.test(trimmed)) return setErr('Letters, digits, - and _ only')
         setBusy(true)
         setErr('')
         try {
             await onCreate(trimmed, fifo)
-            onClose()
+            setName('')
+            setFifo(false)
+            setOpen(false)
         } catch (ex) {
-            setErr(ex instanceof Error ? ex.message : 'Failed to create topic')
+            setErr(ex instanceof Error ? ex.message : 'Create failed')
         } finally {
             setBusy(false)
         }
     }
 
+    if (!open) {
+        return (
+            <button className="button primary" style={{padding: '3px 8px', fontSize: 12}} onClick={() => setOpen(true)}>
+                <Plus size={13}/>
+                Create
+            </button>
+        )
+    }
+
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="create-topic-modal" onClick={(e) => e.stopPropagation()}>
-                <h3>Create SNS Topic</h3>
-
-                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: 14}}>
-                    <div className="field-row">
-                        <label>Name</label>
-                        <input
-                            className="input"
-                            placeholder="my-topic"
-                            value={name}
-                            onChange={(e) => {
-                                setName(e.target.value)
-                                setErr('')
-                            }}
-                            autoFocus
-                        />
-                    </div>
-
-                    {fifo && (
-                        <div style={{fontSize: 11, color: 'var(--text-2)', paddingLeft: 84}}>
-                            Full name: <span style={{fontFamily: 'monospace', color: 'var(--accent)'}}>{effectiveName || '…'}</span>
-                        </div>
-                    )}
-
-                    <div className="field-row">
-                        <label>FIFO Topic</label>
-                        <label className="versioning-toggle">
-                            <input type="checkbox" checked={fifo} onChange={(e) => setFifo(e.target.checked)}/>
-                            <span className="toggle-track"/>
-                        </label>
-                    </div>
-
-                    {err && <div style={{fontSize: 12, color: '#f87171', paddingLeft: 84}}>{err}</div>}
-
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="btn btn-primary" disabled={busy}>
-                            {busy ? <Loader2 size={14} className="spin"/> : <Plus size={14}/>}
-                            Create
-                        </button>
-                    </div>
-                </form>
+        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, margin: '4px 12px 0'}}>
+            <div style={{display: 'flex', gap: 6, alignItems: 'center'}}>
+                <input
+                    className="input"
+                    style={{flex: 1}}
+                    placeholder="Topic name"
+                    value={name}
+                    onChange={(e) => { setName(e.target.value.replace(/[^A-Za-z0-9_\-.]/g, '')); setErr('') }}
+                    autoFocus
+                />
             </div>
-        </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)'}}>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked={fifo} onChange={(e) => setFifo(e.target.checked)}/>
+                    <span className="toggle-track"/>
+                </label>
+                <span>FIFO</span>
+                {fifo && name && (
+                    <span style={{fontSize: 11, color: 'var(--accent)', fontFamily: 'monospace'}}>{effectiveName}</span>
+                )}
+            </div>
+            {err && <span style={{fontSize: 11, color: '#f87171'}}>{err}</span>}
+            <div style={{display: 'flex', gap: 6, justifyContent: 'flex-end'}}>
+                <button type="button" className="button" style={{fontSize: 12}} onClick={() => { setOpen(false); setErr('') }}>Cancel</button>
+                <button type="submit" className="button primary" style={{fontSize: 12}} disabled={busy}>
+                    {busy ? <Loader2 size={13} className="spin"/> : <Plus size={13}/>}
+                    Create
+                </button>
+            </div>
+        </form>
     )
 }
 
@@ -93,21 +95,21 @@ function CreateTopicModal({onClose, onCreate}: { onClose: () => void; onCreate: 
 
 const PROTOCOLS = ['sqs', 'lambda', 'http', 'https', 'email', 'email-json', 'sms']
 
+const ENDPOINT_PLACEHOLDER: Record<string, string> = {
+    sqs: 'arn:aws:sqs:us-east-1:000000000000:my-queue',
+    lambda: 'arn:aws:lambda:us-east-1:000000000000:function:my-fn',
+    http: 'http://example.com/notify',
+    https: 'https://example.com/notify',
+    email: 'user@example.com',
+    'email-json': 'user@example.com',
+    sms: '+1555000000',
+}
+
 function SubscribeForm({topicArn, onDone}: { topicArn: string; onDone: () => void }) {
     const [protocol, setProtocol] = useState('sqs')
     const [endpoint, setEndpoint] = useState('')
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
-
-    const placeholder: Record<string, string> = {
-        sqs: 'arn:aws:sqs:us-east-1:000000000000:my-queue',
-        lambda: 'arn:aws:lambda:us-east-1:000000000000:function:my-fn',
-        http: 'http://example.com/notify',
-        https: 'https://example.com/notify',
-        email: 'user@example.com',
-        'email-json': 'user@example.com',
-        sms: '+1555000000',
-    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -133,25 +135,18 @@ function SubscribeForm({topicArn, onDone}: { topicArn: string; onDone: () => voi
                     className="input"
                     style={{width: 'auto', flexShrink: 0}}
                     value={protocol}
-                    onChange={(e) => {
-                        setProtocol(e.target.value)
-                        setEndpoint('')
-                        setErr('')
-                    }}
+                    onChange={(e) => { setProtocol(e.target.value); setEndpoint(''); setErr('') }}
                 >
                     {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
                 <input
                     className="input"
                     style={{flex: 1}}
-                    placeholder={placeholder[protocol] ?? 'Endpoint'}
+                    placeholder={ENDPOINT_PLACEHOLDER[protocol] ?? 'Endpoint'}
                     value={endpoint}
-                    onChange={(e) => {
-                        setEndpoint(e.target.value)
-                        setErr('')
-                    }}
+                    onChange={(e) => { setEndpoint(e.target.value); setErr('') }}
                 />
-                <button type="submit" className="btn btn-primary" disabled={busy} style={{flexShrink: 0}}>
+                <button type="submit" className="button primary" disabled={busy} style={{flexShrink: 0}}>
                     {busy ? <Loader2 size={14} className="spin"/> : <Plus size={14}/>}
                     Subscribe
                 </button>
@@ -165,6 +160,7 @@ function SubscribeForm({topicArn, onDone}: { topicArn: string; onDone: () => voi
 
 function SubscriptionsTab({topic}: { topic: SnsTopic }) {
     const qc = useQueryClient()
+    const [unsubConfirm, setUnsubConfirm] = useState<string | null>(null)
 
     const {data: subs = [], isLoading, refetch} = useQuery({
         queryKey: ['sns-subs', topic.arn],
@@ -176,36 +172,6 @@ function SubscriptionsTab({topic}: { topic: SnsTopic }) {
         mutationFn: (arn: string) => unsubscribeFromTopic(arn),
         onSuccess: () => qc.invalidateQueries({queryKey: ['sns-subs', topic.arn]}),
     })
-
-    const [unsubConfirm, setUnsubConfirm] = useState<string | null>(null)
-
-    function renderSubRow(sub: SnsSubscription) {
-        const isConfirming = unsubConfirm === sub.subscriptionArn
-        return (
-            <div key={sub.subscriptionArn} className="sns-sub-row">
-                <span className="sns-sub-protocol">{sub.protocol}</span>
-                <span className="sns-sub-endpoint" title={sub.endpoint}>{sub.endpoint || '—'}</span>
-                {isConfirming ? (
-                    <>
-                        <span style={{fontSize: 11, color: '#f87171', flexShrink: 0}}>Remove?</span>
-                        <button
-                            className="btn btn-danger"
-                            style={{padding: '2px 8px', fontSize: 11}}
-                            disabled={unsubMut.isPending}
-                            onClick={() => unsubMut.mutate(sub.subscriptionArn)}
-                        >
-                            {unsubMut.isPending ? <Loader2 size={12} className="spin"/> : 'Yes'}
-                        </button>
-                        <button className="btn btn-ghost" style={{padding: '2px 8px', fontSize: 11}} onClick={() => setUnsubConfirm(null)}>No</button>
-                    </>
-                ) : (
-                    <button className="sns-sub-del" onClick={() => setUnsubConfirm(sub.subscriptionArn)} title="Unsubscribe">
-                        <Trash2 size={13}/>
-                    </button>
-                )}
-            </div>
-        )
-    }
 
     if (isLoading) {
         return (
@@ -221,12 +187,38 @@ function SubscriptionsTab({topic}: { topic: SnsTopic }) {
                 <span style={{fontSize: 12, color: 'var(--text-2)'}}>
                     {subs.length === 0 ? 'No subscriptions' : `${subs.length} subscription${subs.length !== 1 ? 's' : ''}`}
                 </span>
-                <button className="btn btn-ghost" style={{padding: '3px 8px', fontSize: 11}} onClick={() => refetch()}>
+                <button className="button" style={{padding: '3px 8px', fontSize: 11}} onClick={() => refetch()}>
                     <RefreshCw size={12}/>
                 </button>
             </div>
 
-            {subs.map(renderSubRow)}
+            {subs.map((sub: SnsSubscription) => {
+                const isConfirming = unsubConfirm === sub.subscriptionArn
+                return (
+                    <div key={sub.subscriptionArn} className="sns-sub-row">
+                        <span className="sns-sub-protocol">{sub.protocol}</span>
+                        <span className="sns-sub-endpoint" title={sub.endpoint}>{sub.endpoint || '—'}</span>
+                        {isConfirming ? (
+                            <>
+                                <span style={{fontSize: 11, color: '#f87171', flexShrink: 0}}>Remove?</span>
+                                <button
+                                    className="button danger"
+                                    style={{padding: '2px 8px', fontSize: 11}}
+                                    disabled={unsubMut.isPending}
+                                    onClick={() => unsubMut.mutate(sub.subscriptionArn)}
+                                >
+                                    {unsubMut.isPending ? <Loader2 size={12} className="spin"/> : 'Yes'}
+                                </button>
+                                <button className="button" style={{padding: '2px 8px', fontSize: 11}} onClick={() => setUnsubConfirm(null)}>No</button>
+                            </>
+                        ) : (
+                            <button className="sns-sub-del" onClick={() => setUnsubConfirm(sub.subscriptionArn)} title="Unsubscribe">
+                                <Trash2 size={13}/>
+                            </button>
+                        )}
+                    </div>
+                )
+            })}
 
             <SubscribeForm
                 topicArn={topic.arn}
@@ -266,7 +258,9 @@ function PublishTab({topic}: { topic: SnsTopic }) {
         <div className="sns-tab-content">
             <form className="publish-form" onSubmit={handlePublish}>
                 <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                    <label style={{fontSize: 11, color: 'var(--text-2)', fontWeight: 500}}>Subject <span style={{color: 'var(--text-3)'}}>(optional)</span></label>
+                    <label style={{fontSize: 11, color: 'var(--text-2)', fontWeight: 500}}>
+                        Subject <span style={{color: 'var(--text-3)'}}>(optional)</span>
+                    </label>
                     <input
                         className="input"
                         placeholder="Notification subject"
@@ -288,7 +282,7 @@ function PublishTab({topic}: { topic: SnsTopic }) {
                 </div>
 
                 <div style={{display: 'flex', justifyContent: 'flex-end'}}>
-                    <button type="submit" className="btn btn-primary" disabled={busy || !message.trim()}>
+                    <button type="submit" className="button primary" disabled={busy || !message.trim()}>
                         {busy ? <Loader2 size={14} className="spin"/> : <Send size={14}/>}
                         Publish
                     </button>
@@ -301,15 +295,8 @@ function PublishTab({topic}: { topic: SnsTopic }) {
                 </div>
             )}
 
-            {/* SNS fanout info */}
             <div
-                style={{
-                    padding: '10px 14px',
-                    background: 'var(--raised)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                }}
+                style={{padding: '10px 14px', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer'}}
                 onClick={() => setLogOpen((o) => !o)}
             >
                 <div style={{display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)'}}>
@@ -318,11 +305,123 @@ function PublishTab({topic}: { topic: SnsTopic }) {
                 </div>
                 {logOpen && (
                     <div style={{marginTop: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6}}>
-                        When you publish a message, SNS delivers it to <em>all active subscriptions</em> on this topic in parallel. Each subscriber receives
-                        the message independently — SQS queues receive it as a new message, Lambda functions are invoked synchronously, HTTP/HTTPS endpoints
-                        receive a POST request, and email addresses receive an email (after confirming the subscription).
+                        When you publish a message, SNS delivers it to <em>all active subscriptions</em> on this topic
+                        in parallel. SQS queues receive it as a new message, Lambda functions are invoked synchronously,
+                        HTTP/HTTPS endpoints receive a POST request, and email addresses receive an email after confirming
+                        the subscription.
                     </div>
                 )}
+            </div>
+        </div>
+    )
+}
+
+// ─── Attributes & Tags Tab ────────────────────────────────────────────────────
+
+const HIDDEN_ATTRS = new Set(['EffectiveDeliveryPolicy', 'Policy', 'DeliveryPolicy'])
+
+function AttributesTab({topic}: { topic: SnsTopic }) {
+    const qc = useQueryClient()
+    const [editKey, setEditKey] = useState('')
+    const [editVal, setEditVal] = useState('')
+    const [tagErr, setTagErr] = useState('')
+
+    const attrsQuery = useQuery({
+        queryKey: ['sns-attrs', topic.arn],
+        queryFn: ({signal}) => getSnsTopicAttributes(topic.arn, signal),
+        staleTime: 30_000,
+    })
+
+    const tagsQuery = useQuery({
+        queryKey: ['sns-tags', topic.arn],
+        queryFn: ({signal}) => listSnsTopicTags(topic.arn, signal),
+        staleTime: 30_000,
+    })
+
+    const saveMut = useMutation({
+        mutationFn: (tags: SnsTag[]) => setSnsTopicTags(topic.arn, tags),
+        onSuccess: () => qc.invalidateQueries({queryKey: ['sns-tags', topic.arn]}),
+        onError: (e) => setTagErr(e instanceof Error ? e.message : 'Save failed'),
+    })
+
+    const removeMut = useMutation({
+        mutationFn: (key: string) => removeSnsTopicTags(topic.arn, [key]),
+        onSuccess: () => qc.invalidateQueries({queryKey: ['sns-tags', topic.arn]}),
+        onError: (e) => setTagErr(e instanceof Error ? e.message : 'Remove failed'),
+    })
+
+    function handleAddTag(e: React.FormEvent) {
+        e.preventDefault()
+        const k = editKey.trim()
+        const v = editVal.trim()
+        if (!k) return setTagErr('Key is required')
+        saveMut.mutate([...(tagsQuery.data ?? []).filter((t) => t.key !== k), {key: k, value: v}])
+        setEditKey('')
+        setEditVal('')
+        setTagErr('')
+    }
+
+    const attrs = Object.entries(attrsQuery.data ?? {}).filter(([k]) => !HIDDEN_ATTRS.has(k))
+    const tags = tagsQuery.data ?? []
+
+    return (
+        <div className="sns-tab-content">
+            {/* Attributes */}
+            <div>
+                <p style={{fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px', fontWeight: 600}}>
+                    Topic attributes
+                </p>
+                {attrsQuery.isLoading ? (
+                    <div style={{display: 'flex', justifyContent: 'center', padding: 16}}>
+                        <Loader2 size={16} className="spin" style={{color: 'var(--text-3)'}}/>
+                    </div>
+                ) : attrs.length === 0 ? (
+                    <p style={{fontSize: 12, color: 'var(--text-3)', margin: 0}}>No attributes available.</p>
+                ) : (
+                    <div style={{border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden'}}>
+                        {attrs.map(([key, value], i) => (
+                            <div key={key} style={{display: 'grid', gridTemplateColumns: '180px 1fr', borderBottom: i < attrs.length - 1 ? '1px solid var(--border)' : undefined}}>
+                                <div style={{padding: '7px 12px', fontSize: 12, color: 'var(--text-2)', borderRight: '1px solid var(--border)', fontWeight: 500}}>{key}</div>
+                                <div style={{padding: '7px 12px', fontSize: 12, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}} title={value}>{value || '—'}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Tags */}
+            <div>
+                <p style={{fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px', fontWeight: 600}}>
+                    Tags
+                </p>
+                {tagsQuery.isLoading ? (
+                    <div style={{display: 'flex', justifyContent: 'center', padding: 16}}>
+                        <Loader2 size={16} className="spin" style={{color: 'var(--text-3)'}}/>
+                    </div>
+                ) : tags.length === 0 ? (
+                    <p style={{fontSize: 12, color: 'var(--text-3)', margin: '0 0 10px'}}>No tags on this topic.</p>
+                ) : (
+                    <div style={{border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', marginBottom: 10}}>
+                        {tags.map((tag, i) => (
+                            <div key={tag.key} style={{display: 'grid', gridTemplateColumns: '1fr 1fr 36px', borderBottom: i < tags.length - 1 ? '1px solid var(--border)' : undefined, alignItems: 'center'}}>
+                                <div style={{padding: '7px 12px', fontSize: 12, color: '#fbbf24', fontFamily: 'monospace', borderRight: '1px solid var(--border)'}}>{tag.key}</div>
+                                <div style={{padding: '7px 12px', fontSize: 12, fontFamily: 'monospace', borderRight: '1px solid var(--border)'}}>{tag.value}</div>
+                                <button className="sns-sub-del" disabled={removeMut.isPending} onClick={() => removeMut.mutate(tag.key)}>
+                                    {removeMut.isPending ? <Loader2 size={12} className="spin"/> : <Trash2 size={12}/>}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <form onSubmit={handleAddTag} style={{display: 'flex', gap: 8}}>
+                    <input className="input" style={{flex: 1}} placeholder="Key" value={editKey} onChange={(e) => { setEditKey(e.target.value); setTagErr('') }}/>
+                    <input className="input" style={{flex: 1}} placeholder="Value" value={editVal} onChange={(e) => setEditVal(e.target.value)}/>
+                    <button type="submit" className="button primary" disabled={saveMut.isPending} style={{flexShrink: 0}}>
+                        {saveMut.isPending ? <Loader2 size={13} className="spin"/> : <Plus size={13}/>}
+                        Add
+                    </button>
+                </form>
+                {tagErr && <p style={{fontSize: 12, color: '#f87171', margin: '6px 0 0'}}>{tagErr}</p>}
             </div>
         </div>
     )
@@ -331,7 +430,7 @@ function PublishTab({topic}: { topic: SnsTopic }) {
 // ─── Topic Detail ─────────────────────────────────────────────────────────────
 
 function TopicDetail({topic}: { topic: SnsTopic }) {
-    const [tab, setTab] = useState<'subscriptions' | 'publish'>('subscriptions')
+    const [tab, setTab] = useState<'subscriptions' | 'publish' | 'attributes'>('subscriptions')
 
     return (
         <div className="sns-main">
@@ -348,10 +447,14 @@ function TopicDetail({topic}: { topic: SnsTopic }) {
                 <button className={`sns-tab${tab === 'publish' ? ' active' : ''}`} onClick={() => setTab('publish')}>
                     Publish
                 </button>
+                <button className={`sns-tab${tab === 'attributes' ? ' active' : ''}`} onClick={() => setTab('attributes')}>
+                    Attributes &amp; Tags
+                </button>
             </div>
 
             {tab === 'subscriptions' && <SubscriptionsTab key={topic.arn} topic={topic}/>}
             {tab === 'publish' && <PublishTab key={topic.arn} topic={topic}/>}
+            {tab === 'attributes' && <AttributesTab key={topic.arn} topic={topic}/>}
         </div>
     )
 }
@@ -361,7 +464,6 @@ function TopicDetail({topic}: { topic: SnsTopic }) {
 export function SNSPage() {
     const qc = useQueryClient()
     const [selected, setSelected] = useState<SnsTopic | null>(null)
-    const [showCreate, setShowCreate] = useState(false)
     const [delConfirm, setDelConfirm] = useState<string | null>(null)
     const [search, setSearch] = useState('')
 
@@ -381,11 +483,10 @@ export function SNSPage() {
         onSuccess: (_, arn) => {
             if (selected?.arn === arn) setSelected(null)
             setDelConfirm(null)
-            qc.invalidateQueries({queryKey: ['sns-topics']})
+            void qc.invalidateQueries({queryKey: ['sns-topics']})
         },
     })
 
-    // Keep selected in sync if topics reload
     useEffect(() => {
         if (selected && topics.length > 0) {
             const updated = topics.find((t) => t.arn === selected.arn)
@@ -402,15 +503,9 @@ export function SNSPage() {
                 <div className="sns-sidebar-header">
                     <h2>
                         <span>Topics <span style={{color: 'var(--text-3)', fontWeight: 400, fontSize: 11}}>({topics.length})</span></span>
-                        <div style={{display: 'flex', gap: 6}}>
-                            <button className="btn btn-ghost" style={{padding: '3px 6px'}} onClick={() => refetch()} title="Refresh">
-                                <RefreshCw size={13}/>
-                            </button>
-                            <button className="btn btn-primary" style={{padding: '3px 8px', fontSize: 12}} onClick={() => setShowCreate(true)}>
-                                <Plus size={13}/>
-                                Create
-                            </button>
-                        </div>
+                        <button className="button" style={{padding: '3px 6px'}} onClick={() => refetch()} title="Refresh">
+                            <RefreshCw size={13}/>
+                        </button>
                     </h2>
                     <input
                         className="input"
@@ -419,6 +514,12 @@ export function SNSPage() {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
+
+                <CreateTopicBar
+                    onCreate={async (name, fifo) => {
+                        await createMut.mutateAsync({name, fifo})
+                    }}
+                />
 
                 <div className="sns-topic-list">
                     {isLoading && (
@@ -449,23 +550,17 @@ export function SNSPage() {
                                 {isConfirming ? (
                                     <>
                                         <button
-                                            className="btn btn-danger"
+                                            className="button danger"
                                             style={{padding: '1px 6px', fontSize: 11, flexShrink: 0}}
                                             disabled={deleteMut.isPending}
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                deleteMut.mutate(topic.arn)
-                                            }}
+                                            onClick={(e) => { e.stopPropagation(); deleteMut.mutate(topic.arn) }}
                                         >
                                             {deleteMut.isPending ? <Loader2 size={11} className="spin"/> : 'Delete'}
                                         </button>
                                         <button
-                                            className="btn btn-ghost"
+                                            className="button"
                                             style={{padding: '1px 6px', fontSize: 11, flexShrink: 0}}
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setDelConfirm(null)
-                                            }}
+                                            onClick={(e) => { e.stopPropagation(); setDelConfirm(null) }}
                                         >
                                             Cancel
                                         </button>
@@ -474,10 +569,7 @@ export function SNSPage() {
                                     <button
                                         className="sns-topic-item-del"
                                         title="Delete topic"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setDelConfirm(topic.arn)
-                                        }}
+                                        onClick={(e) => { e.stopPropagation(); setDelConfirm(topic.arn) }}
                                     >
                                         <Trash2 size={13}/>
                                     </button>
@@ -496,16 +588,6 @@ export function SNSPage() {
                     <Bell size={40}/>
                     <span>Select a topic to manage subscriptions and publish messages</span>
                 </div>
-            )}
-
-            {/* Create modal */}
-            {showCreate && (
-                <CreateTopicModal
-                    onClose={() => setShowCreate(false)}
-                    onCreate={async (name, fifo) => {
-                        await createMut.mutateAsync({name, fifo})
-                    }}
-                />
             )}
         </div>
     )

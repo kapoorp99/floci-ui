@@ -1,6 +1,7 @@
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {Activity, AreaChart, Bell, Info, RefreshCw, Search, Plus, Trash2, ArrowLeft, Loader2, ChevronDown} from 'lucide-react'
+import {useLocation} from 'react-router-dom'
+import {Activity, AreaChart, Bell, Info, RefreshCw, Search, Plus, Trash2, ArrowLeft, Loader2, ChevronDown, PenLine} from 'lucide-react'
 import {EmptyState} from '@/components/EmptyState'
 import {
     listLogGroups,
@@ -9,8 +10,10 @@ import {
     listAlarms,
     listMetrics,
     createLogGroup,
+    createLogStream,
     deleteLogGroup,
     deleteLogStream,
+    putLogEvents,
 } from '@/api/services'
 import {timeAgo} from '@/lib/utils'
 import type {CWLogEvent, CWLogStream} from '@/api/types'
@@ -198,6 +201,118 @@ function CreateGroupBar({onCreated}: { onCreated: () => void }) {
     )
 }
 
+// ─── Create Log Stream bar ─────────────────────────────────────────────────────
+
+function CreateStreamBar({logGroupName, onCreated}: { logGroupName: string; onCreated: () => void }) {
+    const [open, setOpen] = useState(false)
+    const [name, setName] = useState('')
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState('')
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        const trimmed = name.trim()
+        if (!trimmed) return setErr('Name required')
+        setBusy(true)
+        setErr('')
+        try {
+            await createLogStream(logGroupName, trimmed)
+            setName('')
+            setOpen(false)
+            onCreated()
+        } catch (ex) {
+            setErr(ex instanceof Error ? ex.message : 'Create failed')
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    if (!open) {
+        return (
+            <button className="button" style={{padding: '2px 8px', fontSize: 12}} onClick={() => setOpen(true)}>
+                <Plus size={12}/>
+                New stream
+            </button>
+        )
+    }
+
+    return (
+        <form onSubmit={handleSubmit} style={{display: 'flex', gap: 6, alignItems: 'center', flex: 1}}>
+            <input
+                className="input"
+                style={{flex: 1, height: 26, fontSize: 12}}
+                placeholder="Stream name"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setErr('') }}
+                autoFocus
+            />
+            {err && <span style={{fontSize: 11, color: '#f87171', flexShrink: 0}}>{err}</span>}
+            <button type="submit" className="button primary" style={{padding: '2px 8px', fontSize: 12}} disabled={busy}>
+                {busy ? <Loader2 size={12} className="spin"/> : 'Create'}
+            </button>
+            <button type="button" className="button" style={{padding: '2px 6px', fontSize: 12}} onClick={() => { setOpen(false); setErr('') }}>✕</button>
+        </form>
+    )
+}
+
+// ─── Write Event bar ────────────────────────────────────────────────────────────
+
+function WriteEventBar({logGroupName, logStreamName, onWritten}: { logGroupName: string; logStreamName: string; onWritten: () => void }) {
+    const [open, setOpen] = useState(false)
+    const [message, setMessage] = useState('')
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState('')
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        const trimmed = message.trim()
+        if (!trimmed) return setErr('Message required')
+        setBusy(true)
+        setErr('')
+        try {
+            await putLogEvents(logGroupName, logStreamName, [{timestamp: Date.now(), message: trimmed}])
+            setMessage('')
+            setOpen(false)
+            onWritten()
+        } catch (ex) {
+            setErr(ex instanceof Error ? ex.message : 'Write failed')
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    if (!open) {
+        return (
+            <button className="button" style={{padding: '2px 8px', fontSize: 12}} onClick={() => setOpen(true)} title="Write a log event">
+                <PenLine size={12}/>
+                Write event
+            </button>
+        )
+    }
+
+    return (
+        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 14px', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8}}>
+            <textarea
+                className="input json-editor"
+                rows={3}
+                placeholder='Log message or JSON, e.g. {"level":"info","msg":"hello"}'
+                value={message}
+                onChange={(e) => { setMessage(e.target.value); setErr('') }}
+                autoFocus
+                style={{resize: 'vertical', minHeight: 64, fontSize: 12}}
+            />
+            {err && <span style={{fontSize: 11, color: '#f87171'}}>{err}</span>}
+            <div style={{display: 'flex', gap: 6, justifyContent: 'flex-end'}}>
+                <button type="button" className="button" style={{fontSize: 12}} onClick={() => { setOpen(false); setErr('') }}>Cancel</button>
+                <button type="submit" className="button primary" style={{fontSize: 12}} disabled={busy}>
+                    {busy ? <Loader2 size={12} className="spin"/> : <PenLine size={12}/>}
+                    Write
+                </button>
+            </div>
+        </form>
+    )
+}
+
 // ─── Stream row (with delete) ──────────────────────────────────────────────────
 
 function StreamRow({
@@ -266,12 +381,20 @@ function StreamRow({
 
 export function CloudWatchPage() {
     const qc = useQueryClient()
+    const location = useLocation()
+    const navGroup = (location.state as { group?: string } | null)?.group ?? null
+
     const [prefix, setPrefix] = useState('')
-    const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+    const [selectedGroup, setSelectedGroup] = useState<string | null>(navGroup)
     const [selectedStream, setSelectedStream] = useState<string | null>(null)
     const [eventSearch, setEventSearch] = useState('')
     const [delGroupConfirm, setDelGroupConfirm] = useState<string | null>(null)
     const [showMoreAlarms, setShowMoreAlarms] = useState(false)
+
+    // If navigated here with a pre-selected group, set the prefix filter to show it
+    useEffect(() => {
+        if (navGroup) setPrefix(navGroup)
+    }, [navGroup])
 
     const groupsQuery = useQuery({
         queryKey: ['cloudwatch', 'groups', prefix],
@@ -574,16 +697,22 @@ export function CloudWatchPage() {
                         <div className="content" style={{paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 14}}>
                             {/* Streams list */}
                             <section className="table-panel">
-                                <div className="widget-header">
+                                <div className="widget-header" style={{gap: 8}}>
                                     <h3>Streams</h3>
                                     {streamsQuery.data && (
-                                        <span style={{marginLeft: 'auto', fontSize: 11, color: '#5f7080'}}>
+                                        <span style={{fontSize: 11, color: '#5f7080'}}>
                                             {streamsQuery.data.length} stream{streamsQuery.data.length !== 1 ? 's' : ''}
                                         </span>
                                     )}
-                                    <button className="button" style={{padding: '2px 6px'}} onClick={() => void streamsQuery.refetch()}>
-                                        <RefreshCw size={12}/>
-                                    </button>
+                                    <div style={{marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center'}}>
+                                        <CreateStreamBar
+                                            logGroupName={selectedGroup}
+                                            onCreated={() => void streamsQuery.refetch()}
+                                        />
+                                        <button className="button" style={{padding: '2px 6px'}} onClick={() => void streamsQuery.refetch()}>
+                                            <RefreshCw size={12}/>
+                                        </button>
+                                    </div>
                                 </div>
                                 {streamsQuery.isLoading ? (
                                     <div className="empty compact"><p>Loading streams…</p></div>
@@ -630,6 +759,11 @@ export function CloudWatchPage() {
                                     )}
                                     {selectedStream && (
                                         <div style={{marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8}}>
+                                            <WriteEventBar
+                                                logGroupName={selectedGroup}
+                                                logStreamName={selectedStream}
+                                                onWritten={() => void eventsQuery.refetch()}
+                                            />
                                             <Search size={12} color="#5f7080"/>
                                             <input
                                                 className="input"

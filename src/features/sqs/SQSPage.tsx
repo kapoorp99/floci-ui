@@ -20,12 +20,15 @@ import {
   deleteSqsMessage,
   deleteSqsQueue,
   getSqsQueueAttributes,
+  getSqsQueueTags,
+  setSqsQueueTags,
+  removeSqsQueueTags,
   listServiceResources,
   peekSqsMessages,
   purgeSqsQueue,
   sendSqsMessage,
 } from '@/api/services'
-import type { SqsQueueConfig } from '@/api/services'
+import type { SqsQueueConfig, SqsTag } from '@/api/services'
 import { timeAgo } from '@/lib/utils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -340,6 +343,87 @@ function PeekPanel({ queueUrl }: { queueUrl: string }) {
   )
 }
 
+// ─── Queue tags panel ─────────────────────────────────────────────────────────
+
+function QueueTagsPanel({ queueUrl }: { queueUrl: string }) {
+  const qc = useQueryClient()
+  const [editKey, setEditKey] = useState('')
+  const [editVal, setEditVal] = useState('')
+  const [err, setErr] = useState('')
+
+  const tagsQuery = useQuery({
+    queryKey: ['sqs-tags', queueUrl],
+    queryFn: ({ signal }) => getSqsQueueTags(queueUrl, signal),
+    staleTime: 30_000,
+  })
+
+  const saveMut = useMutation({
+    mutationFn: (tags: SqsTag[]) => setSqsQueueTags(queueUrl, tags),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sqs-tags', queueUrl] }),
+    onError: (e) => setErr(e instanceof Error ? e.message : 'Save failed'),
+  })
+
+  const removeMut = useMutation({
+    mutationFn: (key: string) => removeSqsQueueTags(queueUrl, [key]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sqs-tags', queueUrl] }),
+    onError: (e) => setErr(e instanceof Error ? e.message : 'Remove failed'),
+  })
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    const k = editKey.trim()
+    const v = editVal.trim()
+    if (!k) return setErr('Key is required')
+    saveMut.mutate([...(tagsQuery.data ?? []).filter((t) => t.key !== k), { key: k, value: v }])
+    setEditKey('')
+    setEditVal('')
+    setErr('')
+  }
+
+  const tags = tagsQuery.data ?? []
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {tagsQuery.isLoading ? (
+        <div className="empty compact"><p>Loading tags…</p></div>
+      ) : tags.length === 0 ? (
+        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>No tags on this queue.</p>
+      ) : (
+        <table className="table">
+          <thead><tr><th>Key</th><th>Value</th><th style={{ width: 40 }} /></tr></thead>
+          <tbody>
+            {tags.map((tag) => (
+              <tr key={tag.key}>
+                <td className="mono" style={{ color: '#fbbf24' }}>{tag.key}</td>
+                <td className="mono">{tag.value}</td>
+                <td>
+                  <button
+                    className="icon-btn danger"
+                    disabled={removeMut.isPending}
+                    onClick={() => removeMut.mutate(tag.key)}
+                  >
+                    {removeMut.isPending ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <form onSubmit={handleAdd} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input className="input" style={{ flex: 1 }} placeholder="Key" value={editKey} onChange={(e) => { setEditKey(e.target.value); setErr('') }} />
+        <input className="input" style={{ flex: 1 }} placeholder="Value" value={editVal} onChange={(e) => setEditVal(e.target.value)} />
+        <button type="submit" className="button primary" disabled={saveMut.isPending}>
+          {saveMut.isPending ? <Loader2 size={13} className="spin" /> : <Plus size={13} />}
+          Add
+        </button>
+      </form>
+      {err && <p style={{ fontSize: 12, color: '#f87171', margin: 0 }}>{err}</p>}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SQSPage() {
@@ -349,6 +433,7 @@ export function SQSPage() {
   const [showSend, setShowSend] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [purgeConfirm, setPurgeConfirm] = useState(false)
+  const [detailTab, setDetailTab] = useState<'overview' | 'tags'>('overview')
 
   const queuesQuery = useQuery({
     queryKey: ['resources', 'sqs'],
@@ -385,6 +470,7 @@ export function SQSPage() {
     setSelected({ name, url })
     setShowSend(false)
     setPurgeConfirm(false)
+    setDetailTab('overview')
   }
 
   function handleDeleteQueue() {
@@ -528,6 +614,12 @@ export function SQSPage() {
                 </button>
               </div>
 
+              {/* Tabs */}
+              <div className="sns-tabs" style={{ paddingLeft: 20 }}>
+                <button className={`sns-tab${detailTab === 'overview' ? ' active' : ''}`} onClick={() => setDetailTab('overview')}>Overview</button>
+                <button className={`sns-tab${detailTab === 'tags' ? ' active' : ''}`} onClick={() => setDetailTab('tags')}>Tags</button>
+              </div>
+
               {/* Purge confirm banner */}
               {purgeConfirm && (
                 <div style={{ margin: '0 20px', padding: '12px 14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 6, display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -548,7 +640,13 @@ export function SQSPage() {
                 </div>
               )}
 
-              <div className="content" style={{ paddingTop: 12 }}>
+              {detailTab === 'tags' && (
+                <div className="content" style={{ paddingTop: 12 }}>
+                  <QueueTagsPanel key={selected.url} queueUrl={selected.url} />
+                </div>
+              )}
+
+              {detailTab === 'overview' && <div className="content" style={{ paddingTop: 12 }}>
                 <div className="grid" style={{ gap: 14 }}>
 
                   {/* Send panel */}
@@ -633,7 +731,7 @@ export function SQSPage() {
                   {/* Peek messages */}
                   <PeekPanel key={selected.url} queueUrl={selected.url} />
                 </div>
-              </div>
+              </div>}
             </>
           )}
         </section>

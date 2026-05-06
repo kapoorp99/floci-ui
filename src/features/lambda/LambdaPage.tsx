@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   ChevronDown,
   ChevronUp,
@@ -11,6 +12,7 @@ import {
   Trash2,
   X,
   Zap,
+  ScrollText,
 } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
 import {
@@ -174,6 +176,7 @@ function FunctionDrawer({
   onDeleted: () => void
 }) {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<'details' | 'invoke'>('details')
   const [payload, setPayload] = useState('{\n  \n}')
   const [invokeResult, setInvokeResult] = useState<LambdaInvokeResult | null>(null)
@@ -462,13 +465,24 @@ function FunctionDrawer({
             <button className="button" onClick={() => setDeleteConfirm(false)}>Cancel</button>
           </div>
         ) : (
-          <button
-            className="button danger"
-            onClick={() => setDeleteConfirm(true)}
-          >
-            <Trash2 size={13} />
-            Delete function
-          </button>
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <button
+              className="button"
+              title="Open CloudWatch log group for this function"
+              onClick={() => navigate('/cloudwatch', { state: { group: `/aws/lambda/${functionName}` } })}
+            >
+              <ScrollText size={13} />
+              View logs
+            </button>
+            <button
+              className="button danger"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => setDeleteConfirm(true)}
+            >
+              <Trash2 size={13} />
+              Delete
+            </button>
+          </div>
         )}
       </div>
     </div>
