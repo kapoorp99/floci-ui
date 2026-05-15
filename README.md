@@ -76,7 +76,10 @@ Placeholder services today:
 
 ## Service Detail
 
-### S3 — 95%
+<details>
+<summary><strong>S3 — 95%</strong></summary>
+
+### S3
 
 Implemented:
 
@@ -105,7 +108,12 @@ Remaining gaps:
 | Presigned URL workflow | Available through AWS-compatible S3 behavior |
 | Multipart upload UI | Available in core, not exposed in UI |
 
-### DynamoDB — 95%
+</details>
+
+<details>
+<summary><strong>DynamoDB — 95%</strong></summary>
+
+### DynamoDB
 
 Implemented:
 
@@ -131,7 +139,12 @@ Remaining gaps:
 | GSI / LSI management | `UpdateTable` |
 | UpdateItem (partial update) | `UpdateItem` — current edit uses PutItem which replaces the full item |
 
-### SQS — 95%
+</details>
+
+<details>
+<summary><strong>SQS — 95%</strong></summary>
+
+### SQS
 
 Implemented:
 
@@ -154,7 +167,12 @@ Remaining gaps:
 | Queue tags | `ListQueueTags` / `TagQueue` / `UntagQueue` |
 | Dead-letter queue configuration UI | `GetQueueAttributes` / `SetQueueAttributes` |
 
-### Lambda — 90%
+</details>
+
+<details>
+<summary><strong>Lambda — 90%</strong></summary>
+
+### Lambda
 
 Implemented:
 
@@ -176,7 +194,12 @@ Remaining gaps:
 | Versions | `ListVersionsByFunction` |
 | Link to CloudWatch log group | CloudWatch log groups (by convention `/aws/lambda/{name}`) |
 
-### CloudWatch — 90%
+</details>
+
+<details>
+<summary><strong>CloudWatch — 90%</strong></summary>
+
+### CloudWatch
 
 Implemented:
 
@@ -204,7 +227,12 @@ Remaining gaps:
 | Create log stream from UI | `CreateLogStream` — streams are currently created by the ingestor only |
 | Manual PutLogEvents from UI | `PutLogEvents` |
 
-### SNS — 90%
+</details>
+
+<details>
+<summary><strong>SNS — 90%</strong></summary>
+
+### SNS
 
 Implemented:
 
@@ -227,6 +255,8 @@ Remaining gaps:
 | Subscription confirmation flow | Protocol-specific — email/http require confirmation before `SubscriptionArn` is active |
 | Subscription filter policies | `SetSubscriptionAttributes` |
 
+</details>
+
 ## Setup
 
 ### Prerequisites
@@ -240,7 +270,7 @@ Remaining gaps:
 
 Floci UI needs a running Floci core server before the API and frontend can load resources.
 
-Use Docker:
+Terminal 1, using Docker:
 
 ```bash
 docker run -d --name floci \
@@ -251,7 +281,7 @@ docker run -d --name floci \
   floci/floci:latest
 ```
 
-Or use a local clone of `floci-io/floci`:
+Terminal 1, or using a local clone of `floci-io/floci`:
 
 ```bash
 git clone https://github.com/floci-io/floci.git ../floci
