@@ -234,7 +234,7 @@ Remaining gaps:
 - Node.js 20 or newer.
 - pnpm 9 or newer.
 - Bun, required by `packages/api`.
-- Floci core running on `http://localhost:4566`.
+- Docker, if you want to run Floci with the published container image.
 
 ### 1. Start Floci core
 
@@ -265,6 +265,14 @@ In both cases, verify Floci core is reachable:
 curl http://localhost:4566/_floci/health
 ```
 
+For local development, the UI needs all three of these components running:
+
+1. Floci core on `http://localhost:4566`.
+2. The Floci UI API backend on `http://localhost:3001` via `pnpm dev:api`.
+3. The frontend dev server on `http://localhost:3000` via `pnpm dev`.
+
+The frontend expects `/api/*` endpoints from `packages/api`, so running only `pnpm dev` is not enough.
+
 ### 2. Install Floci UI dependencies
 
 ```bash
@@ -281,15 +289,18 @@ Default `.env` values:
 
 ```bash
 FLOCI_ENDPOINT=http://localhost:4566
+VITE_MOCK_MODE=false
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
 PORT=3001
 ```
 
+`.env.example` already includes `VITE_MOCK_MODE=false` for real Floci usage.
+
 ### 4. Start the local API
 
-In one terminal:
+Terminal 2:
 
 ```bash
 pnpm dev:api
@@ -299,7 +310,7 @@ This starts `packages/api` on `http://localhost:3001` and points AWS SDK clients
 
 ### 5. Start the frontend
 
-In another terminal:
+Terminal 3:
 
 ```bash
 pnpm dev
@@ -315,6 +326,7 @@ http://127.0.0.1:3000/
 
 ```bash
 FLOCI_ENDPOINT=http://localhost:4566
+VITE_MOCK_MODE=false
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
