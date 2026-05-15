@@ -229,70 +229,94 @@ Remaining gaps:
 
 ## Setup
 
-Prerequisites:
+### Prerequisites
 
-- Node.js and npm
-- [Bun](https://bun.sh/) for `npm run dev:api` in `packages/api`
-- Docker, if you want to run Floci with the published container image shown below
+- Node.js 20 or newer.
+- pnpm 9 or newer.
+- Bun, required by `packages/api`.
+- Docker, if you want to run Floci with the published container image.
 
-Install dependencies:
+### 1. Start Floci core
+
+Floci UI needs a running Floci core server before the API and frontend can load resources.
+
+Use Docker:
 
 ```bash
-npm install
+docker run -d --name floci \
+  -p 4566:4566 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e FLOCI_DEFAULT_REGION=us-east-1 \
+  -u root \
+  floci/floci:latest
 ```
 
-Create local environment:
+Or use a local clone of `floci-io/floci`:
+
+```bash
+git clone https://github.com/floci-io/floci.git ../floci
+cd ../floci
+./mvnw clean quarkus:dev
+```
+
+In both cases, verify Floci core is reachable:
+
+```bash
+curl http://localhost:4566/_floci/health
+```
+
+For local development, the UI needs all three of these components running:
+
+1. Floci core on `http://localhost:4566`.
+2. The Floci UI API backend on `http://localhost:3001` via `pnpm dev:api`.
+3. The frontend dev server on `http://localhost:3000` via `pnpm dev`.
+
+The frontend expects `/api/*` endpoints from `packages/api`, so running only `pnpm dev` is not enough.
+
+### 2. Install Floci UI dependencies
+
+```bash
+pnpm install
+```
+
+### 3. Configure local environment
 
 ```bash
 cp .env.example .env
 ```
 
-For local development, the UI needs all three of these components running:
-
-1. Floci backend on `http://localhost:4566`
-2. The floci-ui API backend on `http://localhost:3001` via `npm run dev:api`
-3. The frontend dev server on `http://localhost:3000` via `npm run dev`
-
-The frontend expects `/api/*` endpoints from `packages/api`, so running only `npm run dev` is not enough.
-
-If you are connecting to a real Floci backend, make sure `.env` contains:
+Default `.env` values:
 
 ```bash
+FLOCI_ENDPOINT=http://localhost:4566
 VITE_MOCK_MODE=false
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+PORT=3001
 ```
 
-`.env.example` already includes that value.
+`.env.example` already includes `VITE_MOCK_MODE=false` for real Floci usage.
 
-Example startup sequence:
-
-Terminal 1:
-
-```bash
-docker run --rm -p 4566:4566 floci/floci:latest
-```
+### 4. Start the local API
 
 Terminal 2:
 
 ```bash
-npm run dev:api
+pnpm dev:api
 ```
+
+This starts `packages/api` on `http://localhost:3001` and points AWS SDK clients at `FLOCI_ENDPOINT`.
+
+### 5. Start the frontend
 
 Terminal 3:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
-If you are developing Floci core from source instead of Docker, you can use:
-
-```bash
-cd ../floci
-./mvnw clean quarkus:dev
-```
-
-As long as Floci is available on `http://localhost:4566`, either approach works.
-
-Open:
+Open the UI:
 
 ```text
 http://127.0.0.1:3000/
@@ -301,18 +325,22 @@ http://127.0.0.1:3000/
 ## Environment
 
 ```bash
-VITE_FLOCI_BASE_URL=http://localhost:4566
+FLOCI_ENDPOINT=http://localhost:4566
 VITE_MOCK_MODE=false
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+PORT=3001
 ```
 
-`VITE_MOCK_MODE=true` is only for UI smoke testing. In mock mode, the UI returns empty states instead of fake service resources.
+Floci credentials can be any non-empty value for local development. They are required because the AWS SDK expects credentials, but Floci does not require real AWS credentials.
 
 ## Verification
 
 ```bash
-npm run lint
-npm run type-check
-npm run build
+pnpm lint
+pnpm type-check
+pnpm build
 ```
 
 ## Design Direction
