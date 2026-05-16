@@ -2,7 +2,7 @@ import {
   subscribeApiRequests,
 } from "./requestEventBus";
 import type { ApiRequestEvent } from "./types";
-import { createLogGroup, createLogStream, putLogEvents } from "@/api/services";
+import { cloudWatchClient } from "@/api/aws/cloudwatch.api";
 
 const SKIP_SERVICES = new Set(["cloudwatch", "health"]);
 
@@ -61,7 +61,7 @@ export class CloudWatchRequestIngestor {
     if (this.knownGroups.has(groupName)) return;
 
     try {
-      await createLogGroup(groupName);
+      await cloudWatchClient.createLogGroup(groupName);
     } catch {
       // ResourceAlreadyExistsException is fine here.
     }
@@ -74,7 +74,7 @@ export class CloudWatchRequestIngestor {
     if (this.knownStreams.has(streamKey)) return;
 
     try {
-      await createLogStream(groupName, streamName);
+      await cloudWatchClient.createLogStream(groupName, streamName);
     } catch {
       // ResourceAlreadyExistsException is fine here.
     }
@@ -100,7 +100,7 @@ export class CloudWatchRequestIngestor {
     }));
 
     try {
-      await putLogEvents(groupName, streamName, logEvents);
+      await cloudWatchClient.putLogEvents(groupName, streamName, logEvents);
     } catch (err) {
       console.warn(
         "[CloudWatch Ingestor] putLogEvents failed for",

@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
+const usePolling = process.env.VITE_USE_POLLING === "true";
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -24,6 +26,9 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "0.0.0.0",
+    watch: {
+      usePolling,
+    },
     proxy: {
       "/api": {
         target: process.env.API_TARGET ?? "http://localhost:3001",

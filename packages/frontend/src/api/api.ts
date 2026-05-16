@@ -38,6 +38,28 @@ export const apiEndpointKeys = {
         },
       },
     },
+    cloudwatch: {
+      logGroups: {
+        list: "aws.cloudwatch.log-groups.list",
+        create: "aws.cloudwatch.log-groups.create",
+        delete: "aws.cloudwatch.log-groups.delete",
+      },
+      logStreams: {
+        list: "aws.cloudwatch.log-streams.list",
+        create: "aws.cloudwatch.log-streams.create",
+        delete: "aws.cloudwatch.log-streams.delete",
+      },
+      logEvents: {
+        list: "aws.cloudwatch.log-events.list",
+        put: "aws.cloudwatch.log-events.put",
+      },
+      alarms: {
+        list: "aws.cloudwatch.alarms.list",
+      },
+      metrics: {
+        list: "aws.cloudwatch.metrics.list",
+      },
+    },
   },
 } as const;
 
@@ -161,6 +183,88 @@ export const endpointRegistry: EndpointRegistry = new Map([
       path: "/s3/:bucket/tags",
       method: "PUT",
       telemetry: { provider: "aws", service: "s3" },
+    },
+  ],
+
+  // AWS CloudWatch
+  [
+    apiEndpointKeys.aws.cloudwatch.logGroups.list,
+    {
+      path: "/cloudwatch/log-groups",
+      method: "GET",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logGroups.create,
+    {
+      path: "/cloudwatch/log-groups",
+      method: "POST",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logGroups.delete,
+    {
+      path: "/cloudwatch/log-groups",
+      method: "DELETE",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logStreams.list,
+    {
+      path: "/cloudwatch/log-streams",
+      method: "GET",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logStreams.create,
+    {
+      path: "/cloudwatch/log-streams",
+      method: "POST",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logStreams.delete,
+    {
+      path: "/cloudwatch/log-streams",
+      method: "DELETE",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logEvents.list,
+    {
+      path: "/cloudwatch/log-events",
+      method: "GET",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.logEvents.put,
+    {
+      path: "/cloudwatch/log-events",
+      method: "POST",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.alarms.list,
+    {
+      path: "/cloudwatch/alarms",
+      method: "GET",
+      telemetry: { provider: "aws", service: "cloudwatch" },
+    },
+  ],
+  [
+    apiEndpointKeys.aws.cloudwatch.metrics.list,
+    {
+      path: "/cloudwatch/metrics",
+      method: "GET",
+      telemetry: { provider: "aws", service: "cloudwatch" },
     },
   ],
 

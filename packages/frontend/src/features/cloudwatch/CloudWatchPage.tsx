@@ -1,20 +1,21 @@
 import {useEffect, useMemo, useState} from 'react'
-import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {useLocation} from 'react-router-dom'
 import {Activity, AreaChart, Bell, Info, RefreshCw, Search, Plus, Trash2, ArrowLeft, Loader2, ChevronDown, PenLine} from 'lucide-react'
 import {EmptyState} from '@/components/EmptyState'
 import {
-    listLogGroups,
-    listLogStreams,
-    getLogEvents,
-    listAlarms,
-    listMetrics,
-    createLogGroup,
-    createLogStream,
-    deleteLogGroup,
-    deleteLogStream,
-    putLogEvents,
-} from '@/api/services'
+    useAlarmsQuery,
+    useLogEventsQuery,
+    useLogGroupsQuery,
+    useLogStreamsQuery,
+    useMetricsQuery,
+} from '@/api/aws/cloudwatch.queries'
+import {
+    useCreateLogGroupMutation,
+    useCreateLogStreamMutation,
+    useDeleteLogGroupMutation,
+    useDeleteLogStreamMutation,
+    usePutLogEventsMutation,
+} from '@/api/aws/cloudwatch.mutations'
 import {timeAgo} from '@/lib/utils'
 import type {CWLogEvent, CWLogStream} from '@/api/types'
 
@@ -136,26 +137,26 @@ function CreateGroupBar({onCreated}: { onCreated: () => void }) {
     const [open, setOpen] = useState(false)
     const [name, setName] = useState('')
     const [retention, setRetention] = useState('')
-    const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
+    const createMutation = useCreateLogGroupMutation({
+        onSuccess: () => {
+            setName('')
+            setRetention('')
+            setOpen(false)
+            onCreated()
+        },
+        onError: (ex) => setErr(ex instanceof Error ? ex.message : 'Create failed'),
+    })
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         const trimmed = name.trim()
         if (!trimmed) return setErr('Name required')
-        setBusy(true)
         setErr('')
-        try {
-            await createLogGroup(trimmed, retention ? Number(retention) : undefined)
-            setName('')
-            setRetention('')
-            setOpen(false)
-            onCreated()
-        } catch (ex) {
-            setErr(ex instanceof Error ? ex.message : 'Create failed')
-        } finally {
-            setBusy(false)
-        }
+        createMutation.mutate({
+            name: trimmed,
+            retentionInDays: retention ? Number(retention) : undefined,
+        })
     }
 
     if (!open) {
@@ -192,8 +193,8 @@ function CreateGroupBar({onCreated}: { onCreated: () => void }) {
             {err && <span style={{fontSize: 11, color: '#f87171'}}>{err}</span>}
             <div style={{display: 'flex', gap: 6, justifyContent: 'flex-end'}}>
                 <button type="button" className="button" onClick={() => { setOpen(false); setErr('') }}>Cancel</button>
-                <button type="submit" className="button primary" disabled={busy}>
-                    {busy ? <Loader2 size={13} className="spin"/> : <Plus size={13}/>}
+                <button type="submit" className="button primary" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? <Loader2 size={13} className="spin"/> : <Plus size={13}/>}
                     Create
                 </button>
             </div>
@@ -206,25 +207,22 @@ function CreateGroupBar({onCreated}: { onCreated: () => void }) {
 function CreateStreamBar({logGroupName, onCreated}: { logGroupName: string; onCreated: () => void }) {
     const [open, setOpen] = useState(false)
     const [name, setName] = useState('')
-    const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
+    const createMutation = useCreateLogStreamMutation({
+        onSuccess: () => {
+            setName('')
+            setOpen(false)
+            onCreated()
+        },
+        onError: (ex) => setErr(ex instanceof Error ? ex.message : 'Create failed'),
+    })
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         const trimmed = name.trim()
         if (!trimmed) return setErr('Name required')
-        setBusy(true)
         setErr('')
-        try {
-            await createLogStream(logGroupName, trimmed)
-            setName('')
-            setOpen(false)
-            onCreated()
-        } catch (ex) {
-            setErr(ex instanceof Error ? ex.message : 'Create failed')
-        } finally {
-            setBusy(false)
-        }
+        createMutation.mutate({group: logGroupName, name: trimmed})
     }
 
     if (!open) {
@@ -247,8 +245,8 @@ function CreateStreamBar({logGroupName, onCreated}: { logGroupName: string; onCr
                 autoFocus
             />
             {err && <span style={{fontSize: 11, color: '#f87171', flexShrink: 0}}>{err}</span>}
-            <button type="submit" className="button primary" style={{padding: '2px 8px', fontSize: 12}} disabled={busy}>
-                {busy ? <Loader2 size={12} className="spin"/> : 'Create'}
+            <button type="submit" className="button primary" style={{padding: '2px 8px', fontSize: 12}} disabled={createMutation.isPending}>
+                {createMutation.isPending ? <Loader2 size={12} className="spin"/> : 'Create'}
             </button>
             <button type="button" className="button" style={{padding: '2px 6px', fontSize: 12}} onClick={() => { setOpen(false); setErr('') }}>✕</button>
         </form>
@@ -260,25 +258,26 @@ function CreateStreamBar({logGroupName, onCreated}: { logGroupName: string; onCr
 function WriteEventBar({logGroupName, logStreamName, onWritten}: { logGroupName: string; logStreamName: string; onWritten: () => void }) {
     const [open, setOpen] = useState(false)
     const [message, setMessage] = useState('')
-    const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
+    const writeMutation = usePutLogEventsMutation({
+        onSuccess: () => {
+            setMessage('')
+            setOpen(false)
+            onWritten()
+        },
+        onError: (ex) => setErr(ex instanceof Error ? ex.message : 'Write failed'),
+    })
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         const trimmed = message.trim()
         if (!trimmed) return setErr('Message required')
-        setBusy(true)
         setErr('')
-        try {
-            await putLogEvents(logGroupName, logStreamName, [{timestamp: Date.now(), message: trimmed}])
-            setMessage('')
-            setOpen(false)
-            onWritten()
-        } catch (ex) {
-            setErr(ex instanceof Error ? ex.message : 'Write failed')
-        } finally {
-            setBusy(false)
-        }
+        writeMutation.mutate({
+            group: logGroupName,
+            stream: logStreamName,
+            events: [{timestamp: Date.now(), message: trimmed}],
+        })
     }
 
     if (!open) {
@@ -304,8 +303,8 @@ function WriteEventBar({logGroupName, logStreamName, onWritten}: { logGroupName:
             {err && <span style={{fontSize: 11, color: '#f87171'}}>{err}</span>}
             <div style={{display: 'flex', gap: 6, justifyContent: 'flex-end'}}>
                 <button type="button" className="button" style={{fontSize: 12}} onClick={() => { setOpen(false); setErr('') }}>Cancel</button>
-                <button type="submit" className="button primary" style={{fontSize: 12}} disabled={busy}>
-                    {busy ? <Loader2 size={12} className="spin"/> : <PenLine size={12}/>}
+                <button type="submit" className="button primary" style={{fontSize: 12}} disabled={writeMutation.isPending}>
+                    {writeMutation.isPending ? <Loader2 size={12} className="spin"/> : <PenLine size={12}/>}
                     Write
                 </button>
             </div>
@@ -329,8 +328,7 @@ function StreamRow({
     onDeleted: () => void
 }) {
     const [confirmDel, setConfirmDel] = useState(false)
-    const delMut = useMutation({
-        mutationFn: () => deleteLogStream(selectedGroup, stream.name),
+    const delMut = useDeleteLogStreamMutation({
         onSuccess: onDeleted,
     })
 
@@ -356,7 +354,7 @@ function StreamRow({
                             className="button danger"
                             style={{padding: '1px 6px', fontSize: 11}}
                             disabled={delMut.isPending}
-                            onClick={() => delMut.mutate()}
+                            onClick={() => delMut.mutate({group: selectedGroup, stream: stream.name})}
                         >
                             {delMut.isPending ? <Loader2 size={11} className="spin"/> : 'Delete'}
                         </button>
@@ -380,7 +378,6 @@ function StreamRow({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export function CloudWatchPage() {
-    const qc = useQueryClient()
     const location = useLocation()
     const navGroup = (location.state as { group?: string } | null)?.group ?? null
 
@@ -396,43 +393,19 @@ export function CloudWatchPage() {
         if (navGroup) setPrefix(navGroup)
     }, [navGroup])
 
-    const groupsQuery = useQuery({
-        queryKey: ['cloudwatch', 'groups', prefix],
-        queryFn: ({signal}) => listLogGroups(prefix || undefined, signal),
-        refetchInterval: 10_000,
-    })
-    const alarmsQuery = useQuery({
-        queryKey: ['cloudwatch', 'alarms'],
-        queryFn: ({signal}) => listAlarms(signal),
-        refetchInterval: 30_000,
-    })
-    const metricsQuery = useQuery({
-        queryKey: ['cloudwatch', 'metrics'],
-        queryFn: ({signal}) => listMetrics(signal),
-        refetchInterval: 30_000,
-    })
-    const streamsQuery = useQuery({
-        queryKey: ['cloudwatch', 'streams', selectedGroup],
-        queryFn: ({signal}) => listLogStreams(selectedGroup!, signal),
-        enabled: Boolean(selectedGroup),
-        refetchInterval: 10_000,
-    })
-    const eventsQuery = useQuery({
-        queryKey: ['cloudwatch', 'events', selectedGroup, selectedStream],
-        queryFn: ({signal}) => getLogEvents(selectedGroup!, selectedStream!, signal),
-        enabled: Boolean(selectedGroup && selectedStream),
-        refetchInterval: 10_000,
-    })
+    const groupsQuery = useLogGroupsQuery(prefix)
+    const alarmsQuery = useAlarmsQuery()
+    const metricsQuery = useMetricsQuery()
+    const streamsQuery = useLogStreamsQuery(selectedGroup)
+    const eventsQuery = useLogEventsQuery(selectedGroup, selectedStream)
 
-    const delGroupMut = useMutation({
-        mutationFn: (name: string) => deleteLogGroup(name),
+    const delGroupMut = useDeleteLogGroupMutation({
         onSuccess: (_, name) => {
             if (selectedGroup === name) {
                 setSelectedGroup(null)
                 setSelectedStream(null)
             }
             setDelGroupConfirm(null)
-            void qc.invalidateQueries({queryKey: ['cloudwatch', 'groups']})
         },
     })
 

@@ -2,6 +2,7 @@ import {Hono} from 'hono'
 import {
     GetQueueAttributesCommand,
     ListQueuesCommand,
+    QueueAttributeName,
     ReceiveMessageCommand,
     SendMessageCommand,
 } from '@aws-sdk/client-sqs'
@@ -30,7 +31,7 @@ app.get('/queue/attributes', async (c) => {
         AttributeNames: ['All'],
     }))
     const a = res.Attributes ?? {}
-    const toInt = (k: string) => a[k] !== undefined ? Number(a[k]) : undefined
+    const toInt = (k: QueueAttributeName) => a[k] !== undefined ? Number(a[k]) : undefined
     return c.json({
         approximateNumberOfMessages: toInt('ApproximateNumberOfMessages'),
         approximateNumberOfMessagesDelayed: toInt('ApproximateNumberOfMessagesDelayed'),

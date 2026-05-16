@@ -1,12 +1,13 @@
 import { apiDelete, apiGet, apiPost, apiPut } from "./floci-client";
 import { listS3Buckets as listAwsS3Buckets } from "./aws/s3.api";
+import {
+  listAlarms as listAwsCloudWatchAlarms,
+  listCloudWatchResources as listAwsCloudWatchResources,
+  listLogGroups as listAwsCloudWatchLogGroups,
+  listMetrics as listAwsCloudWatchMetrics,
+} from "./aws/cloudwatch.api";
 import type {
   ConsoleOverview,
-  CWAlarm,
-  CWLogEvent,
-  CWLogGroup,
-  CWLogStream,
-  CWMetric,
   HealthReport,
   ResourceSummary,
   ServiceName,
@@ -217,9 +218,9 @@ export async function fetchConsoleOverview(
         timedCount(s as ServiceName, signal),
       ),
     ),
-    listLogGroups(undefined, signal).catch(() => []),
-    listAlarms(signal).catch(() => []),
-    listMetrics(signal).catch(() => []),
+    listAwsCloudWatchLogGroups(undefined, signal).catch(() => []),
+    listAwsCloudWatchAlarms(signal).catch(() => []),
+    listAwsCloudWatchMetrics(signal).catch(() => []),
   ]);
   return {
     checkedAt: new Date().toISOString(),
@@ -246,7 +247,7 @@ export async function listServiceResources(
   if (service === "sns") return listSnsTopicResources(signal);
   if (service === "lambda") return listLambdaFunctions(signal);
   if (service === "dynamodb") return listDynamoDbTables(signal);
-  if (service === "cloudwatch") return listCloudWatchResources(signal);
+  if (service === "cloudwatch") return listAwsCloudWatchResources(signal);
   return [];
 }
 
@@ -787,137 +788,5 @@ export async function deleteDynamoDbItem(
     "dynamodb",
     { key },
     signal,
-  );
-}
-
-// ─── CloudWatch ───────────────────────────────────────────────────────────────
-
-async function listCloudWatchResources(
-  signal?: AbortSignal,
-): Promise<ResourceSummary[]> {
-  const [groups, alarms, metrics] = await Promise.all([
-    listLogGroups(undefined, signal).catch(() => []),
-    listAlarms(signal).catch(() => []),
-    listMetrics(signal).catch(() => []),
-  ]);
-  return [
-    ...groups.map((g) => ({
-      id: `log-group:${g.name}`,
-      name: g.name,
-      status: "log group",
-      metadata: { storedBytes: g.storedBytes, createdAt: g.createdAt },
-    })),
-    ...alarms.map((a) => ({
-      id: `alarm:${a.alarmName}`,
-      name: a.alarmName,
-      status: a.stateValue,
-      metadata: {
-        metricName: a.metricName,
-        namespace: a.namespace,
-        threshold: a.threshold,
-      },
-    })),
-    ...metrics.map((m) => ({
-      id: `metric:${m.id}`,
-      name: `${m.namespace}/${m.metricName}`,
-      status: "metric",
-      metadata: { dimensions: m.dimensions.length },
-    })),
-  ];
-}
-
-export async function listLogGroups(
-  prefix?: string,
-  signal?: AbortSignal,
-): Promise<CWLogGroup[]> {
-  const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : "";
-  return apiGet<CWLogGroup[]>(
-    `/cloudwatch/log-groups${qs}`,
-    "cloudwatch",
-    signal,
-  );
-}
-
-export async function listLogStreams(
-  logGroupName: string,
-  signal?: AbortSignal,
-): Promise<CWLogStream[]> {
-  if (!logGroupName) return [];
-  return apiGet<CWLogStream[]>(
-    `/cloudwatch/log-streams?group=${encodeURIComponent(logGroupName)}`,
-    "cloudwatch",
-    signal,
-  );
-}
-
-export async function getLogEvents(
-  logGroupName: string,
-  logStreamName: string,
-  signal?: AbortSignal,
-): Promise<CWLogEvent[]> {
-  if (!logGroupName || !logStreamName) return [];
-  return apiGet<CWLogEvent[]>(
-    `/cloudwatch/log-events?group=${encodeURIComponent(logGroupName)}&stream=${encodeURIComponent(logStreamName)}`,
-    "cloudwatch",
-    signal,
-  );
-}
-
-export async function listAlarms(signal?: AbortSignal): Promise<CWAlarm[]> {
-  return apiGet<CWAlarm[]>("/cloudwatch/alarms", "cloudwatch", signal);
-}
-
-export async function listMetrics(signal?: AbortSignal): Promise<CWMetric[]> {
-  return apiGet<CWMetric[]>("/cloudwatch/metrics", "cloudwatch", signal);
-}
-
-export async function createLogGroup(
-  logGroupName: string,
-  retentionInDays?: number,
-): Promise<void> {
-  await apiPost("/cloudwatch/log-groups", "cloudwatch", {
-    name: logGroupName,
-    retentionInDays,
-  });
-}
-
-export async function deleteLogGroup(logGroupName: string): Promise<void> {
-  await apiDelete(
-    `/cloudwatch/log-groups?name=${encodeURIComponent(logGroupName)}`,
-    "cloudwatch",
-  );
-}
-
-export async function createLogStream(
-  logGroupName: string,
-  logStreamName: string,
-): Promise<void> {
-  await apiPost("/cloudwatch/log-streams", "cloudwatch", {
-    group: logGroupName,
-    name: logStreamName,
-  });
-}
-
-export async function deleteLogStream(
-  logGroupName: string,
-  logStreamName: string,
-): Promise<void> {
-  await apiDelete(
-    `/cloudwatch/log-streams?group=${encodeURIComponent(logGroupName)}&stream=${encodeURIComponent(logStreamName)}`,
-    "cloudwatch",
-  );
-}
-
-export async function putLogEvents(
-  logGroupName: string,
-  logStreamName: string,
-  logEvents: Array<{ timestamp: number; message: string }>,
-): Promise<void> {
-  console.log(
-    await apiPost("/cloudwatch/log-events", "cloudwatch", {
-      group: logGroupName,
-      stream: logStreamName,
-      events: logEvents,
-    }),
   );
 }

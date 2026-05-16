@@ -19,12 +19,26 @@ const base = {
   ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
 };
 
-export const s3 = new S3Client({ ...base, forcePathStyle: true });
-export const sqs = new SQSClient(base);
-export const sns = new SNSClient(base);
-export const lambda = new LambdaClient(base);
-export const dynamodb = new DynamoDBClient(base);
-export const cwLogs = new CloudWatchLogsClient(base);
-export const cw = new CloudWatchClient(base);
-export const eks = new EKSClient(base);
-export const ec2 = new EC2Client(base);
+export const awsClients = {
+  s3: new S3Client({ ...base, forcePathStyle: true }),
+  sqs: new SQSClient(base),
+  sns: new SNSClient(base),
+  lambda: new LambdaClient(base),
+  dynamodb: new DynamoDBClient(base),
+  cloudwatchLogs: new CloudWatchLogsClient(base),
+  cloudwatch: new CloudWatchClient(base),
+  eks: new EKSClient(base),
+  ec2: new EC2Client(base),
+} as const;
+
+export type AwsClientName = keyof typeof awsClients;
+
+export const s3 = awsClients.s3;
+export const sqs = awsClients.sqs;
+export const sns = awsClients.sns;
+export const lambda = awsClients.lambda;
+export const dynamodb = awsClients.dynamodb;
+export const cwLogs = awsClients.cloudwatchLogs;
+export const cw = awsClients.cloudwatch;
+export const eks = awsClients.eks;
+export const ec2 = awsClients.ec2;
