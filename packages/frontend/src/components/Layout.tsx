@@ -2,6 +2,7 @@ import {NavLink, Outlet} from 'react-router-dom'
 import {
     AreaChart,
     Bell,
+    Cloud,
     Cpu,
     Database,
     KeyRound,
@@ -25,8 +26,9 @@ import {fetchHealth, SERVICE_META} from '@/api/services'
 import type {ServiceName} from '@/api/types'
 import {useCloudWatchIngestor} from '@/features/cloudwatch/hooks/useCloudWatchIngestor'
 
-const ICONS: Record<ServiceName | 'dashboard', React.ElementType> = {
+const ICONS: Record<ServiceName | 'dashboard' | 'cloudExplorer', React.ElementType> = {
     dashboard: LayoutDashboard,
+    cloudExplorer: Cloud,
     cloudwatch: AreaChart,
     s3: Database,
     sqs: MessageSquare,
@@ -83,6 +85,7 @@ export function Layout() {
                     <div className="nav-section">
                         <span className="nav-label">General</span>
                         <NavItem to="/dashboard" icon={ICONS.dashboard} label="Console Home"/>
+                        <NavItem to="/cloud-explorer" icon={ICONS.cloudExplorer} label="Cloud Explorer"/>
                     </div>
                     <div className="nav-section">
                         <span className="nav-label">Services</span>

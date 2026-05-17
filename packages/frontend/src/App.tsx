@@ -8,6 +8,7 @@ import {SQSPage} from '@/features/sqs/SQSPage'
 import {DynamoDBPage} from '@/features/dynamodb/DynamoDBPage'
 import {LambdaPage} from '@/features/lambda/LambdaPage'
 import {SNSPage} from '@/features/sns/SNSPage'
+import {CloudExplorerPage} from '@/pages/CloudExplorerPage'
 
 export default function App() {
     return (
@@ -16,6 +17,7 @@ export default function App() {
                 <Route element={<Layout/>}>
                     <Route index element={<Navigate to="/dashboard" replace/>}/>
                     <Route path="/dashboard" element={<DashboardPage/>}/>
+                    <Route path="/cloud-explorer" element={<CloudExplorerPage/>}/>
                     <Route path="/cloudwatch" element={<CloudWatchPage/>}/>
                     <Route path="/s3" element={<S3Page/>}/>
                     <Route path="/sqs" element={<SQSPage/>}/>
