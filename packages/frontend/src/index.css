@@ -1067,6 +1067,31 @@ pre,
     text-transform: uppercase;
 }
 
+.dynamic-field small {
+    color: var(--text-2);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.dynamic-field .field-error {
+    color: #fca5a5;
+}
+
+.input.invalid {
+    border-color: rgba(248, 113, 113, 0.55);
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.12);
+}
+
+.form-error {
+    grid-column: 1 / -1;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    border-radius: 4px;
+    background: rgba(248, 113, 113, 0.08);
+    color: #fca5a5;
+    padding: 8px 10px;
+    font-size: 12px;
+}
+
 .resource-workbench {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;

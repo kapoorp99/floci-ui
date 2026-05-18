@@ -51,6 +51,9 @@ export class AwsStorageAdapter implements CloudServiceAdapter {
     async create(input: CreateResourceInput): Promise<CloudResource> {
         const bucketName = stringValue(input.values.bucketName)
         if (!bucketName) throw new Error('bucketName is required')
+        if (!isValidS3BucketName(bucketName)) {
+            throw new Error('Use a valid S3 bucket name: 3-63 lowercase characters, numbers, dots, or hyphens.')
+        }
 
         await s3.send(new CreateBucketCommand({Bucket: bucketName}))
         return {
@@ -135,4 +138,8 @@ function filterBySearch(resources: CloudResource[], search?: string): CloudResou
 function objectName(key: string, prefix: string): string {
     const relative = key.startsWith(prefix) ? key.slice(prefix.length) : key
     return relative.replace(/\/$/, '') || key
+}
+
+function isValidS3BucketName(value: string): boolean {
+    return /^(?!\d+\.\d+\.\d+\.\d+$)(?!.*\.\.)(?!.*\.-)(?!.*-\.)(?!.*--x-s3$)(?!.*-s3alias$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(value)
 }

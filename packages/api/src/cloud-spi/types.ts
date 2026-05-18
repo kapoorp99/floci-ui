@@ -33,6 +33,13 @@ export interface FieldSchema {
     label: string
     type: FieldType
     required: boolean
+    description?: string
+    validation?: {
+        pattern?: string
+        minLength?: number
+        maxLength?: number
+        message?: string
+    }
     options?: Array<{label: string; value: string}>
 }
 

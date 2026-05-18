@@ -43,7 +43,11 @@ export function DynamicResourceView({cloud, service, cloudStatus, statusLoading 
 
     const createMut = useMutation({
         mutationFn: (values: Record<string, unknown>) => createCloudResource(cloud, service, values),
-        onSuccess: () => qc.invalidateQueries({queryKey: ['cloud-resources', cloud, service]}),
+        onSuccess: (resource) => {
+            setSelected(resource)
+            setCreateOpen(false)
+            void qc.invalidateQueries({queryKey: ['cloud-resources', cloud, service]})
+        },
     })
 
     const deleteMut = useMutation({
@@ -141,7 +145,12 @@ export function DynamicResourceView({cloud, service, cloudStatus, statusLoading 
                         </div>
                         {createOpen && (
                             <div className="resource-create-inline">
-                                <DynamicFormRenderer schema={schema} isSubmitting={createMut.isPending} onSubmit={(values) => createMut.mutate(values)}/>
+                                <DynamicFormRenderer
+                                    schema={schema}
+                                    isSubmitting={createMut.isPending}
+                                    submitError={createMut.error instanceof Error ? createMut.error.message : null}
+                                    onSubmit={(values) => createMut.mutate(values)}
+                                />
                             </div>
                         )}
                         {renderResourceSurface({

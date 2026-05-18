@@ -18,7 +18,19 @@ export function awsStorageSchema(): ServiceSchema {
         service: 'storage',
         displayName: 'S3 Storage',
         fields: [
-            {name: 'bucketName', label: 'Bucket Name', type: 'text', required: true},
+            {
+                name: 'bucketName',
+                label: 'Bucket Name',
+                type: 'text',
+                required: true,
+                description: '3-63 characters. Lowercase letters, numbers, dots, and hyphens.',
+                validation: {
+                    pattern: '^(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)(?!.*\\.\\.)(?!.*\\.-)(?!.*-\\.)(?!.*--x-s3$)(?!.*-s3alias$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$',
+                    minLength: 3,
+                    maxLength: 63,
+                    message: 'Use a valid S3 bucket name: 3-63 lowercase characters, numbers, dots, or hyphens.',
+                },
+            },
             {
                 name: 'region',
                 label: 'Region',
@@ -42,7 +54,19 @@ export function azureStorageSchema(): ServiceSchema {
         service: 'storage',
         displayName: 'Azure Blob Storage',
         fields: [
-            {name: 'containerName', label: 'Container Name', type: 'text', required: true},
+            {
+                name: 'containerName',
+                label: 'Container Name',
+                type: 'text',
+                required: true,
+                description: '3-63 characters. Lowercase letters, numbers, and hyphens.',
+                validation: {
+                    pattern: '^[a-z0-9](?:[a-z0-9]|-(?!-)){1,61}[a-z0-9]$',
+                    minLength: 3,
+                    maxLength: 63,
+                    message: 'Use a valid Azure container name: 3-63 lowercase letters, numbers, or single hyphens.',
+                },
+            },
         ],
         actions: ['list', 'create', 'delete', 'inspect'],
         filters: storageFilters,

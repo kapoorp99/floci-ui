@@ -39,6 +39,9 @@ export class AzureStorageAdapter implements CloudServiceAdapter {
     async create(input: CreateResourceInput): Promise<CloudResource> {
         const containerName = stringValue(input.values.containerName)
         if (!containerName) throw new Error('containerName is required')
+        if (!isValidContainerName(containerName)) {
+            throw new Error('Use a valid Azure container name: 3-63 lowercase letters, numbers, or single hyphens.')
+        }
 
         await this.azureFetch(`/${encodeURIComponent(containerName)}?restype=container`, {method: 'PUT'})
         return normalizeContainer(containerName, null)
@@ -186,4 +189,8 @@ function copyBytes(bytes: Uint8Array): ArrayBuffer {
     const copy = new Uint8Array(bytes.byteLength)
     copy.set(bytes)
     return copy.buffer
+}
+
+function isValidContainerName(value: string): boolean {
+    return /^[a-z0-9](?:[a-z0-9]|-(?!-)){1,61}[a-z0-9]$/.test(value)
 }
