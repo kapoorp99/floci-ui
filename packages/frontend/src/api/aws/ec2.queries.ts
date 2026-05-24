@@ -6,13 +6,20 @@ export const ec2QueryKeys = {
   instance: (instanceId: string | null) => ["ec2", "instance", instanceId] as const,
   amis: ["ec2", "amis"] as const,
   keyPairs: ["ec2", "key-pairs"] as const,
+  // Parameterized list queries — call with vpcId for scoped, omit for all
   securityGroups: (vpcId?: string) => ["ec2", "security-groups", vpcId ?? "all"] as const,
-  vpcs: ["ec2", "vpcs"] as const,
   subnets: (vpcId?: string) => ["ec2", "subnets", vpcId ?? "all"] as const,
-  consoleOutput: (instanceId: string | null) => ["ec2", "console", instanceId] as const,
-  internetGateways: ["ec2", "internet-gateways"] as const,
   natGateways: (vpcId?: string) => ["ec2", "nat-gateways", vpcId ?? "all"] as const,
   routeTables: (vpcId?: string) => ["ec2", "route-tables", vpcId ?? "all"] as const,
+  // Root keys — use in mutations to invalidate all variants of a parameterized query
+  securityGroupsAll: ["ec2", "security-groups"] as const,
+  subnetsAll: ["ec2", "subnets"] as const,
+  natGatewaysAll: ["ec2", "nat-gateways"] as const,
+  routeTablesAll: ["ec2", "route-tables"] as const,
+  // Static list keys
+  vpcs: ["ec2", "vpcs"] as const,
+  consoleOutput: (instanceId: string | null) => ["ec2", "console", instanceId] as const,
+  internetGateways: ["ec2", "internet-gateways"] as const,
   elasticIps: ["ec2", "elastic-ips"] as const,
   availabilityZones: ["ec2", "availability-zones"] as const,
   instanceTypes: ["ec2", "instance-types"] as const,

@@ -137,16 +137,21 @@ export const apiEndpointKeys = {
         delete: "aws.ec2.security-groups.delete",
         authorize: "aws.ec2.security-groups.authorize",
         revoke: "aws.ec2.security-groups.revoke",
+        authorizeEgress: "aws.ec2.security-groups.authorize-egress",
+        revokeEgress: "aws.ec2.security-groups.revoke-egress",
       },
       vpcs: {
         list: "aws.ec2.vpcs.list",
         create: "aws.ec2.vpcs.create",
         delete: "aws.ec2.vpcs.delete",
+        getAttributes: "aws.ec2.vpcs.get-attributes",
+        modifyAttribute: "aws.ec2.vpcs.modify-attribute",
       },
       subnets: {
         list: "aws.ec2.subnets.list",
         create: "aws.ec2.subnets.create",
         delete: "aws.ec2.subnets.delete",
+        modifyAttribute: "aws.ec2.subnets.modify-attribute",
       },
       internetGateways: {
         list: "aws.ec2.igw.list",
@@ -173,7 +178,12 @@ export const apiEndpointKeys = {
         list: "aws.ec2.eip.list",
         create: "aws.ec2.eip.create",
         delete: "aws.ec2.eip.delete",
+        associate: "aws.ec2.eip.associate",
+        disassociate: "aws.ec2.eip.disassociate",
       },
+      availabilityZones: "aws.ec2.availability-zones",
+      instanceTypes: "aws.ec2.instance-types",
+      vpcWizard: "aws.ec2.vpc-wizard",
     },
   },
 } as const;
@@ -738,8 +748,16 @@ export const endpointRegistry: EndpointRegistry = new Map([
   [apiEndpointKeys.aws.ec2.elasticIps.list,         { path: "/ec2/elastic-ips", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.elasticIps.create,       { path: "/ec2/elastic-ips", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.elasticIps.delete,       { path: "/ec2/elastic-ips/:allocationId", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
-
-  // TODO: migrate remaining services into this registry.
+  [apiEndpointKeys.aws.ec2.elasticIps.associate,    { path: "/ec2/elastic-ips/:allocationId/associate", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.elasticIps.disassociate, { path: "/ec2/elastic-ips/:allocationId/associate", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.securityGroups.authorizeEgress, { path: "/ec2/security-groups/:groupId/egress", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.securityGroups.revokeEgress,    { path: "/ec2/security-groups/:groupId/egress", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.vpcs.getAttributes,      { path: "/ec2/vpcs/:vpcId/attributes", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.vpcs.modifyAttribute,    { path: "/ec2/vpcs/:vpcId/attributes", method: "PUT", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.subnets.modifyAttribute, { path: "/ec2/subnets/:subnetId/attributes", method: "PUT", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.availabilityZones,       { path: "/ec2/availability-zones", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.instanceTypes,           { path: "/ec2/instance-types", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.vpcWizard,               { path: "/ec2/vpc-wizard", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
 ]);
 
 // ─── Client Factory ───────────────────────────────────────────────────────────

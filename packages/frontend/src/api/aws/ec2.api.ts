@@ -357,11 +357,11 @@ export async function deleteEc2KeyPair(name: string): Promise<void> {
 }
 
 export async function listEc2SecurityGroups(vpcId?: string, signal?: AbortSignal): Promise<Ec2SecurityGroup[]> {
-  const path = vpcId
-    ? `/ec2/security-groups?vpcId=${encodeURIComponent(vpcId)}`
-    : "/ec2/security-groups";
-  const res = await fetch(`/api${path}`, { signal });
-  return res.json() as Promise<Ec2SecurityGroup[]>;
+  const res = await apiClient.call<Ec2SecurityGroup[]>(
+    apiEndpointKeys.aws.ec2.securityGroups.list,
+    { params: { vpcId }, signal },
+  );
+  return res.data;
 }
 
 export async function createEc2SecurityGroup(
@@ -406,45 +406,49 @@ export async function authorizeEc2SecurityGroupEgress(
   groupId: string,
   permission: IpPermissionInput,
 ): Promise<void> {
-  await fetch(`/api/ec2/security-groups/${groupId}/egress`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(permission),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.securityGroups.authorizeEgress,
+    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { groupId },
+  );
 }
 
 export async function revokeEc2SecurityGroupEgress(
   groupId: string,
   permission: IpPermissionInput,
 ): Promise<void> {
-  await fetch(`/api/ec2/security-groups/${groupId}/egress`, {
-    method: "DELETE",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(permission),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.securityGroups.revokeEgress,
+    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { groupId },
+  );
 }
 
 export async function listEc2AvailabilityZones(signal?: AbortSignal): Promise<Ec2AvailabilityZone[]> {
-  const res = await fetch("/api/ec2/availability-zones", { signal });
-  return res.json() as Promise<Ec2AvailabilityZone[]>;
+  const res = await apiClient.call<Ec2AvailabilityZone[]>(apiEndpointKeys.aws.ec2.availabilityZones, { signal });
+  return res.data;
 }
 
 export async function listEc2InstanceTypes(signal?: AbortSignal): Promise<Ec2InstanceType[]> {
-  const res = await fetch("/api/ec2/instance-types", { signal });
-  return res.json() as Promise<Ec2InstanceType[]>;
+  const res = await apiClient.call<Ec2InstanceType[]>(apiEndpointKeys.aws.ec2.instanceTypes, { signal });
+  return res.data;
 }
 
 export async function modifyEc2SubnetAttribute(subnetId: string, mapPublicIpOnLaunch: boolean): Promise<void> {
-  await fetch(`/api/ec2/subnets/${subnetId}/attributes`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ mapPublicIpOnLaunch }),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.subnets.modifyAttribute,
+    { body: JSON.stringify({ mapPublicIpOnLaunch }), headers: { "content-type": "application/json" } },
+    { subnetId },
+  );
 }
 
 export async function getEc2VpcAttributes(vpcId: string, signal?: AbortSignal): Promise<Ec2VpcAttributes> {
-  const res = await fetch(`/api/ec2/vpcs/${vpcId}/attributes`, { signal });
-  return res.json() as Promise<Ec2VpcAttributes>;
+  const res = await apiClient.call<Ec2VpcAttributes>(
+    apiEndpointKeys.aws.ec2.vpcs.getAttributes,
+    { signal },
+    { vpcId },
+  );
+  return res.data;
 }
 
 export async function modifyEc2VpcAttribute(
@@ -452,31 +456,31 @@ export async function modifyEc2VpcAttribute(
   attribute: "enableDnsHostnames" | "enableDnsSupport",
   value: boolean,
 ): Promise<void> {
-  await fetch(`/api/ec2/vpcs/${vpcId}/attributes`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ attribute, value }),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.vpcs.modifyAttribute,
+    { body: JSON.stringify({ attribute, value }), headers: { "content-type": "application/json" } },
+    { vpcId },
+  );
 }
 
 export async function associateEc2ElasticIp(
   allocationId: string,
   instanceId: string,
 ): Promise<{ associationId: string }> {
-  const res = await fetch(`/api/ec2/elastic-ips/${allocationId}/associate`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ instanceId }),
-  });
-  return res.json() as Promise<{ associationId: string }>;
+  const res = await apiClient.call<{ associationId: string }>(
+    apiEndpointKeys.aws.ec2.elasticIps.associate,
+    { body: JSON.stringify({ instanceId }), headers: { "content-type": "application/json" } },
+    { allocationId },
+  );
+  return res.data;
 }
 
 export async function disassociateEc2ElasticIp(allocationId: string, associationId: string): Promise<void> {
-  await fetch(`/api/ec2/elastic-ips/${allocationId}/associate`, {
-    method: "DELETE",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ associationId }),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.elasticIps.disassociate,
+    { body: JSON.stringify({ associationId }), headers: { "content-type": "application/json" } },
+    { allocationId },
+  );
 }
 
 export async function listEc2Vpcs(signal?: AbortSignal): Promise<Ec2Vpc[]> {
@@ -497,11 +501,11 @@ export async function deleteEc2Vpc(vpcId: string): Promise<void> {
 }
 
 export async function listEc2Subnets(vpcId?: string, signal?: AbortSignal): Promise<Ec2Subnet[]> {
-  const path = vpcId
-    ? `/ec2/subnets?vpcId=${encodeURIComponent(vpcId)}`
-    : "/ec2/subnets";
-  const res = await fetch(`/api${path}`, { signal });
-  return res.json() as Promise<Ec2Subnet[]>;
+  const res = await apiClient.call<Ec2Subnet[]>(
+    apiEndpointKeys.aws.ec2.subnets.list,
+    { params: { vpcId }, signal },
+  );
+  return res.data;
 }
 
 export async function createEc2Subnet(
@@ -521,140 +525,130 @@ export async function deleteEc2Subnet(subnetId: string): Promise<void> {
 }
 
 export async function listEc2InternetGateways(signal?: AbortSignal): Promise<Ec2InternetGateway[]> {
-  const res = await fetch("/api/ec2/internet-gateways", { signal });
-  return res.json() as Promise<Ec2InternetGateway[]>;
+  const res = await apiClient.call<Ec2InternetGateway[]>(apiEndpointKeys.aws.ec2.internetGateways.list, { signal });
+  return res.data;
 }
 
 export async function createEc2InternetGateway(name?: string): Promise<Ec2InternetGateway> {
-  const res = await fetch("/api/ec2/internet-gateways", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  return res.json() as Promise<Ec2InternetGateway>;
+  const res = await apiClient.call<Ec2InternetGateway>(
+    apiEndpointKeys.aws.ec2.internetGateways.create,
+    { body: JSON.stringify({ name }), headers: { "content-type": "application/json" } },
+  );
+  return res.data;
 }
 
 export async function attachEc2InternetGateway(igwId: string, vpcId: string): Promise<void> {
-  await fetch(`/api/ec2/internet-gateways/${igwId}/attach`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ vpcId }),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.internetGateways.attach,
+    { body: JSON.stringify({ vpcId }), headers: { "content-type": "application/json" } },
+    { igwId },
+  );
 }
 
 export async function detachEc2InternetGateway(igwId: string, vpcId: string): Promise<void> {
-  await fetch(`/api/ec2/internet-gateways/${igwId}/detach`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ vpcId }),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.internetGateways.detach,
+    { body: JSON.stringify({ vpcId }), headers: { "content-type": "application/json" } },
+    { igwId },
+  );
 }
 
 export async function deleteEc2InternetGateway(igwId: string): Promise<void> {
-  await fetch(`/api/ec2/internet-gateways/${igwId}`, { method: "DELETE" });
+  await apiClient.call(apiEndpointKeys.aws.ec2.internetGateways.delete, {}, { igwId });
 }
 
 export async function listEc2NatGateways(vpcId?: string, signal?: AbortSignal): Promise<Ec2NatGateway[]> {
-  const path = vpcId ? `/api/ec2/nat-gateways?vpcId=${encodeURIComponent(vpcId)}` : "/api/ec2/nat-gateways";
-  const res = await fetch(path, { signal });
-  return res.json() as Promise<Ec2NatGateway[]>;
+  const res = await apiClient.call<Ec2NatGateway[]>(
+    apiEndpointKeys.aws.ec2.natGateways.list,
+    { params: { vpcId }, signal },
+  );
+  return res.data;
 }
 
 export async function createEc2NatGateway(input: CreateNatGatewayInput): Promise<Ec2NatGateway> {
-  const res = await fetch("/api/ec2/nat-gateways", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Unknown error" })) as { error?: string };
-    throw new Error(err.error ?? "NAT Gateway creation failed");
-  }
-  return res.json() as Promise<Ec2NatGateway>;
+  const res = await apiClient.call<Ec2NatGateway>(
+    apiEndpointKeys.aws.ec2.natGateways.create,
+    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+  );
+  return res.data;
 }
 
 export async function deleteEc2NatGateway(natId: string): Promise<void> {
-  await fetch(`/api/ec2/nat-gateways/${natId}`, { method: "DELETE" });
+  await apiClient.call(apiEndpointKeys.aws.ec2.natGateways.delete, {}, { natId });
 }
 
 export async function listEc2RouteTables(vpcId?: string, signal?: AbortSignal): Promise<Ec2RouteTable[]> {
-  const path = vpcId ? `/api/ec2/route-tables?vpcId=${encodeURIComponent(vpcId)}` : "/api/ec2/route-tables";
-  const res = await fetch(path, { signal });
-  return res.json() as Promise<Ec2RouteTable[]>;
+  const res = await apiClient.call<Ec2RouteTable[]>(
+    apiEndpointKeys.aws.ec2.routeTables.list,
+    { params: { vpcId }, signal },
+  );
+  return res.data;
 }
 
 export async function createEc2RouteTable(vpcId: string, name?: string): Promise<Ec2RouteTable> {
-  const res = await fetch("/api/ec2/route-tables", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ vpcId, name }),
-  });
-  return res.json() as Promise<Ec2RouteTable>;
+  const res = await apiClient.call<Ec2RouteTable>(
+    apiEndpointKeys.aws.ec2.routeTables.create,
+    { body: JSON.stringify({ vpcId, name }), headers: { "content-type": "application/json" } },
+  );
+  return res.data;
 }
 
 export async function deleteEc2RouteTable(rtbId: string): Promise<void> {
-  const res = await fetch(`/api/ec2/route-tables/${rtbId}`, { method: "DELETE" });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Unknown error" })) as { error?: string };
-    throw new Error(err.error ?? "Route table deletion failed");
-  }
+  await apiClient.call(apiEndpointKeys.aws.ec2.routeTables.delete, {}, { rtbId });
 }
 
 export async function createEc2Route(rtbId: string, input: CreateRouteInput): Promise<void> {
-  await fetch(`/api/ec2/route-tables/${rtbId}/routes`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.routeTables.createRoute,
+    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { rtbId },
+  );
 }
 
 export async function deleteEc2Route(rtbId: string, cidr: string): Promise<void> {
-  await fetch(`/api/ec2/route-tables/${rtbId}/routes?cidr=${encodeURIComponent(cidr)}`, { method: "DELETE" });
+  await apiClient.call(
+    apiEndpointKeys.aws.ec2.routeTables.deleteRoute,
+    { params: { cidr } },
+    { rtbId },
+  );
 }
 
 export async function associateEc2RouteTable(rtbId: string, subnetId: string): Promise<string> {
-  const res = await fetch(`/api/ec2/route-tables/${rtbId}/associations`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ subnetId }),
-  });
-  const data = await res.json() as { associationId: string };
-  return data.associationId;
+  const res = await apiClient.call<{ associationId: string }>(
+    apiEndpointKeys.aws.ec2.routeTables.associate,
+    { body: JSON.stringify({ subnetId }), headers: { "content-type": "application/json" } },
+    { rtbId },
+  );
+  return res.data.associationId;
 }
 
 export async function disassociateEc2RouteTable(associationId: string): Promise<void> {
-  await fetch(`/api/ec2/route-table-associations/${associationId}`, { method: "DELETE" });
+  await apiClient.call(apiEndpointKeys.aws.ec2.routeTables.disassociate, {}, { associationId });
 }
 
 export async function listEc2ElasticIps(signal?: AbortSignal): Promise<Ec2ElasticIp[]> {
-  const res = await fetch("/api/ec2/elastic-ips", { signal });
-  return res.json() as Promise<Ec2ElasticIp[]>;
+  const res = await apiClient.call<Ec2ElasticIp[]>(apiEndpointKeys.aws.ec2.elasticIps.list, { signal });
+  return res.data;
 }
 
 export async function allocateEc2ElasticIp(name?: string): Promise<Ec2ElasticIp> {
-  const res = await fetch("/api/ec2/elastic-ips", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  return res.json() as Promise<Ec2ElasticIp>;
+  const res = await apiClient.call<Ec2ElasticIp>(
+    apiEndpointKeys.aws.ec2.elasticIps.create,
+    { body: JSON.stringify({ name }), headers: { "content-type": "application/json" } },
+  );
+  return res.data;
 }
 
 export async function releaseEc2ElasticIp(allocationId: string): Promise<void> {
-  await fetch(`/api/ec2/elastic-ips/${allocationId}`, { method: "DELETE" });
+  await apiClient.call(apiEndpointKeys.aws.ec2.elasticIps.delete, {}, { allocationId });
 }
 
 export async function createVpcWizard(input: VpcWizardInput): Promise<VpcWizardResult> {
-  const res = await fetch("/api/ec2/vpc-wizard", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Unknown error" })) as { error?: string };
-    throw new Error(err.error ?? "VPC wizard failed");
-  }
-  return res.json() as Promise<VpcWizardResult>;
+  const res = await apiClient.call<VpcWizardResult>(
+    apiEndpointKeys.aws.ec2.vpcWizard,
+    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+  );
+  return res.data;
 }
 
 export async function listEc2Resources(signal?: AbortSignal): Promise<ResourceSummary[]> {

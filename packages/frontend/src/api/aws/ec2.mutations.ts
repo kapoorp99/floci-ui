@@ -169,7 +169,7 @@ export function useCreateSecurityGroupMutation() {
     mutationFn: ({ name, description, vpcId }: { name: string; description: string; vpcId: string }) =>
       createEc2SecurityGroup(name, description, vpcId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -179,7 +179,7 @@ export function useDeleteSecurityGroupMutation() {
   return useMutation({
     mutationFn: (groupId: string) => deleteEc2SecurityGroup(groupId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -190,7 +190,7 @@ export function useAuthorizeSecurityGroupIngressMutation() {
     mutationFn: ({ groupId, permission }: { groupId: string; permission: IpPermissionInput }) =>
       authorizeEc2SecurityGroupIngress(groupId, permission),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -201,7 +201,7 @@ export function useRevokeSecurityGroupIngressMutation() {
     mutationFn: ({ groupId, permission }: { groupId: string; permission: IpPermissionInput }) =>
       revokeEc2SecurityGroupIngress(groupId, permission),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -212,7 +212,7 @@ export function useAuthorizeSecurityGroupEgressMutation() {
     mutationFn: ({ groupId, permission }: { groupId: string; permission: IpPermissionInput }) =>
       authorizeEc2SecurityGroupEgress(groupId, permission),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -223,7 +223,7 @@ export function useRevokeSecurityGroupEgressMutation() {
     mutationFn: ({ groupId, permission }: { groupId: string; permission: IpPermissionInput }) =>
       revokeEc2SecurityGroupEgress(groupId, permission),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
     },
   });
 }
@@ -246,10 +246,10 @@ export function useDeleteVpcMutation() {
     mutationFn: (vpcId: string) => deleteEc2Vpc(vpcId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ec2QueryKeys.vpcs });
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "security-groups"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.securityGroupsAll });
       void qc.invalidateQueries({ queryKey: ec2QueryKeys.internetGateways });
-      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTables() });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
       void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
     },
   });
@@ -281,7 +281,7 @@ export function useDeleteSubnetMutation() {
   return useMutation({
     mutationFn: (subnetId: string) => deleteEc2Subnet(subnetId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
     },
   });
 }
@@ -293,7 +293,7 @@ export function useCreateInternetGatewayMutation() {
   return useMutation({
     mutationFn: (name?: string) => createEc2InternetGateway(name),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "internet-gateways"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.internetGateways });
     },
   });
 }
@@ -304,7 +304,7 @@ export function useAttachInternetGatewayMutation() {
     mutationFn: ({ igwId, vpcId }: { igwId: string; vpcId: string }) =>
       attachEc2InternetGateway(igwId, vpcId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "internet-gateways"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.internetGateways });
     },
   });
 }
@@ -315,7 +315,7 @@ export function useDetachInternetGatewayMutation() {
     mutationFn: ({ igwId, vpcId }: { igwId: string; vpcId: string }) =>
       detachEc2InternetGateway(igwId, vpcId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "internet-gateways"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.internetGateways });
     },
   });
 }
@@ -325,8 +325,8 @@ export function useDeleteInternetGatewayMutation() {
   return useMutation({
     mutationFn: (igwId: string) => deleteEc2InternetGateway(igwId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "internet-gateways"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.internetGateways });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
     },
   });
 }
@@ -338,8 +338,8 @@ export function useCreateNatGatewayMutation() {
   return useMutation({
     mutationFn: (input: CreateNatGatewayInput) => createEc2NatGateway(input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "nat-gateways"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "elastic-ips"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.natGatewaysAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
     },
   });
 }
@@ -349,8 +349,8 @@ export function useDeleteNatGatewayMutation() {
   return useMutation({
     mutationFn: (natId: string) => deleteEc2NatGateway(natId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "nat-gateways"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.natGatewaysAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
     },
   });
 }
@@ -363,7 +363,7 @@ export function useCreateRouteTableMutation() {
     mutationFn: ({ vpcId, name }: { vpcId: string; name?: string }) =>
       createEc2RouteTable(vpcId, name),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
     },
   });
 }
@@ -373,8 +373,8 @@ export function useDeleteRouteTableMutation() {
   return useMutation({
     mutationFn: (rtbId: string) => deleteEc2RouteTable(rtbId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
     },
   });
 }
@@ -384,9 +384,8 @@ export function useCreateRouteMutation() {
   return useMutation({
     mutationFn: ({ rtbId, input }: { rtbId: string; input: CreateRouteInput }) =>
       createEc2Route(rtbId, input),
-    onSuccess: (_data, { rtbId }) => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-table", rtbId] });
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
     },
   });
 }
@@ -397,7 +396,7 @@ export function useDeleteRouteMutation() {
     mutationFn: ({ rtbId, cidr }: { rtbId: string; cidr: string }) =>
       deleteEc2Route(rtbId, cidr),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
     },
   });
 }
@@ -408,8 +407,8 @@ export function useAssociateRouteTableMutation() {
     mutationFn: ({ rtbId, subnetId }: { rtbId: string; subnetId: string }) =>
       associateEc2RouteTable(rtbId, subnetId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
     },
   });
 }
@@ -419,8 +418,8 @@ export function useDisassociateRouteTableMutation() {
   return useMutation({
     mutationFn: (associationId: string) => disassociateEc2RouteTable(associationId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "route-tables"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.routeTablesAll });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
     },
   });
 }
@@ -432,7 +431,7 @@ export function useAllocateElasticIpMutation() {
   return useMutation({
     mutationFn: (name?: string) => allocateEc2ElasticIp(name),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "elastic-ips"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
     },
   });
 }
@@ -442,7 +441,7 @@ export function useReleaseElasticIpMutation() {
   return useMutation({
     mutationFn: (allocationId: string) => releaseEc2ElasticIp(allocationId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "elastic-ips"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
     },
   });
 }
@@ -453,8 +452,8 @@ export function useAssociateElasticIpMutation() {
     mutationFn: ({ allocationId, instanceId }: { allocationId: string; instanceId: string }) =>
       associateEc2ElasticIp(allocationId, instanceId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "elastic-ips"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "instances"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.instances });
     },
   });
 }
@@ -465,8 +464,8 @@ export function useDisassociateElasticIpMutation() {
     mutationFn: ({ allocationId, associationId }: { allocationId: string; associationId: string }) =>
       disassociateEc2ElasticIp(allocationId, associationId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "elastic-ips"] });
-      void qc.invalidateQueries({ queryKey: ["ec2", "instances"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.elasticIps });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.instances });
     },
   });
 }
@@ -477,7 +476,7 @@ export function useModifySubnetAttributeMutation() {
     mutationFn: ({ subnetId, mapPublicIpOnLaunch }: { subnetId: string; mapPublicIpOnLaunch: boolean }) =>
       modifyEc2SubnetAttribute(subnetId, mapPublicIpOnLaunch),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "subnets"] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.subnetsAll });
     },
   });
 }
@@ -488,7 +487,7 @@ export function useModifyVpcAttributeMutation() {
     mutationFn: ({ vpcId, attribute, value }: { vpcId: string; attribute: "enableDnsHostnames" | "enableDnsSupport"; value: boolean }) =>
       modifyEc2VpcAttribute(vpcId, attribute, value),
     onSuccess: (_data, { vpcId }) => {
-      void qc.invalidateQueries({ queryKey: ["ec2", "vpc-attributes", vpcId] });
+      void qc.invalidateQueries({ queryKey: ec2QueryKeys.vpcAttributes(vpcId) });
     },
   });
 }
