@@ -124,7 +124,7 @@ export const apiEndpointKeys = {
       },
       amis: {
         list: "aws.ec2.amis.list",
-        delete: "aws.ec2.amis.delete",
+        deregister: "aws.ec2.amis.deregister",
       },
       keyPairs: {
         list: "aws.ec2.key-pairs.list",
@@ -177,7 +177,7 @@ export const apiEndpointKeys = {
       elasticIps: {
         list: "aws.ec2.eip.list",
         create: "aws.ec2.eip.create",
-        delete: "aws.ec2.eip.delete",
+        release: "aws.ec2.eip.release",
         associate: "aws.ec2.eip.associate",
         disassociate: "aws.ec2.eip.disassociate",
       },
@@ -671,8 +671,8 @@ export const endpointRegistry: EndpointRegistry = new Map([
     { path: "/ec2/amis", method: "GET", telemetry: { provider: "aws", service: "ec2" } },
   ],
   [
-    apiEndpointKeys.aws.ec2.amis.delete,
-    { path: "/ec2/amis/:imageId", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } },
+    apiEndpointKeys.aws.ec2.amis.deregister,
+    { path: "/ec2/amis/:imageId/deregister", method: "POST", telemetry: { provider: "aws", service: "ec2" } },
   ],
   [
     apiEndpointKeys.aws.ec2.keyPairs.list,
@@ -747,9 +747,9 @@ export const endpointRegistry: EndpointRegistry = new Map([
   [apiEndpointKeys.aws.ec2.routeTables.disassociate,{ path: "/ec2/route-table-associations/:associationId", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.elasticIps.list,         { path: "/ec2/elastic-ips", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.elasticIps.create,       { path: "/ec2/elastic-ips", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
-  [apiEndpointKeys.aws.ec2.elasticIps.delete,       { path: "/ec2/elastic-ips/:allocationId", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.elasticIps.release,      { path: "/ec2/elastic-ips/:allocationId/release", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.elasticIps.associate,    { path: "/ec2/elastic-ips/:allocationId/associate", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
-  [apiEndpointKeys.aws.ec2.elasticIps.disassociate, { path: "/ec2/elastic-ips/:allocationId/associate", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
+  [apiEndpointKeys.aws.ec2.elasticIps.disassociate, { path: "/ec2/elastic-ips/:allocationId/disassociate", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.securityGroups.authorizeEgress, { path: "/ec2/security-groups/:groupId/egress", method: "POST", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.securityGroups.revokeEgress,    { path: "/ec2/security-groups/:groupId/egress", method: "DELETE", telemetry: { provider: "aws", service: "ec2" } }],
   [apiEndpointKeys.aws.ec2.vpcs.getAttributes,      { path: "/ec2/vpcs/:vpcId/attributes", method: "GET", telemetry: { provider: "aws", service: "ec2" } }],

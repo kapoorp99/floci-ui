@@ -336,7 +336,7 @@ export async function listEc2Amis(signal?: AbortSignal): Promise<Ec2Image[]> {
 }
 
 export async function deregisterEc2Ami(imageId: string): Promise<void> {
-  await apiClient.call(apiEndpointKeys.aws.ec2.amis.delete, {}, { imageId });
+  await apiClient.call(apiEndpointKeys.aws.ec2.amis.deregister, {}, { imageId });
 }
 
 export async function listEc2KeyPairs(signal?: AbortSignal): Promise<Ec2KeyPair[]> {
@@ -640,7 +640,7 @@ export async function allocateEc2ElasticIp(name?: string): Promise<Ec2ElasticIp>
 }
 
 export async function releaseEc2ElasticIp(allocationId: string): Promise<void> {
-  await apiClient.call(apiEndpointKeys.aws.ec2.elasticIps.delete, {}, { allocationId });
+  await apiClient.call(apiEndpointKeys.aws.ec2.elasticIps.release, {}, { allocationId });
 }
 
 export async function createVpcWizard(input: VpcWizardInput): Promise<VpcWizardResult> {

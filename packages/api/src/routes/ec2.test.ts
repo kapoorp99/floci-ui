@@ -199,6 +199,14 @@ describe('POST /instances/:id/terminate', () => {
     })
 })
 
+describe('POST /amis/:imageId/deregister', () => {
+    test('deregisters AMI and returns ok', async () => {
+        const res = await app.request('/amis/ami-0a1b2c3d4e5f6a7b/deregister', {method: 'POST'})
+        expect(res.status).toBe(200)
+        expect((await res.json() as {ok: boolean}).ok).toBe(true)
+    })
+})
+
 describe('GET /instances/:id/console', () => {
     test('returns console output', async () => {
         const res = await app.request('/instances/i-test1/console')
@@ -364,9 +372,9 @@ describe('POST /elastic-ips', () => {
     })
 })
 
-describe('DELETE /elastic-ips/:allocationId', () => {
+describe('POST /elastic-ips/:allocationId/release', () => {
     test('releases eip and returns ok', async () => {
-        const res = await app.request('/elastic-ips/eipalloc-0a1b2c3d4e5f6a7b', {method: 'DELETE'})
+        const res = await app.request('/elastic-ips/eipalloc-0a1b2c3d4e5f6a7b/release', {method: 'POST'})
         expect(res.status).toBe(200)
         expect((await res.json() as {ok: boolean}).ok).toBe(true)
     })
@@ -488,10 +496,10 @@ describe('POST /elastic-ips/:allocationId/associate', () => {
     })
 })
 
-describe('DELETE /elastic-ips/:allocationId/associate', () => {
+describe('POST /elastic-ips/:allocationId/disassociate', () => {
     test('disassociates eip and returns ok', async () => {
-        const res = await app.request('/elastic-ips/eipalloc-0a1b2c3d4e5f6a7b/associate', {
-            method: 'DELETE',
+        const res = await app.request('/elastic-ips/eipalloc-0a1b2c3d4e5f6a7b/disassociate', {
+            method: 'POST',
             headers: {'content-type': 'application/json'},
             body: JSON.stringify({associationId: 'eipassoc-test'}),
         })

@@ -108,7 +108,7 @@ export function createEc2Router(svc: Ec2Service = ec2Service) {
         return c.json(await svc.listAmis())
     })
 
-    app.delete('/amis/:imageId', async (c) => {
+    app.post('/amis/:imageId/deregister', async (c) => {
         try {
             await svc.deregisterImage(c.req.param('imageId'))
             return c.json({ok: true})
@@ -437,7 +437,7 @@ export function createEc2Router(svc: Ec2Service = ec2Service) {
         }
     })
 
-    app.delete('/elastic-ips/:allocationId', async (c) => {
+    app.post('/elastic-ips/:allocationId/release', async (c) => {
         try {
             await svc.releaseElasticIp(c.req.param('allocationId'))
             return c.json({ok: true})
@@ -455,7 +455,7 @@ export function createEc2Router(svc: Ec2Service = ec2Service) {
         }
     })
 
-    app.delete('/elastic-ips/:allocationId/associate', async (c) => {
+    app.post('/elastic-ips/:allocationId/disassociate', async (c) => {
         try {
             const {associationId} = await c.req.json<{associationId: string}>()
             await svc.disassociateElasticIp(associationId)
