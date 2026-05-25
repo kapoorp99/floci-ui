@@ -37,7 +37,6 @@ const ICONS: Record<ServiceName | 'dashboard', React.ElementType> = {
     sns: Bell,
     lambda: Zap,
     eks: Boxes,
-    ec2: Server,
     secretsmanager: KeyRound,
     cognito: Users,
     rds: Database,

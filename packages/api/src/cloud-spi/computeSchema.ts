@@ -18,8 +18,17 @@ export function awsComputeSchema(): ServiceSchema {
         service: 'compute',
         displayName: 'Compute',
         fields: [],
-        actions: ['list', 'inspect'],
+        actions: ['list', 'inspect', 'delete'],
         filters: computeFilters,
         columns: computeColumns,
+        capabilities: {
+            resourceActions: [
+                {name: 'list',    label: 'List',            enabled: true,  status: 'available',    runtimeRequired: true},
+                {name: 'inspect', label: 'Inspect',         enabled: true,  status: 'available',    runtimeRequired: true},
+                {name: 'delete',  label: 'Terminate',       enabled: true,  status: 'available',    runtimeRequired: true},
+                {name: 'create',  label: 'Launch instance', enabled: false, status: 'coming_soon',
+                    reason: 'Requires cascading VPC → Subnet → SG selectors not yet supported by the generic adapter form.'},
+            ],
+        },
     }
 }

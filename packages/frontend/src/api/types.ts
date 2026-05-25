@@ -7,7 +7,6 @@ export type ServiceName =
     | 'sns'
     | 'lambda'
     | 'eks'
-    | 'ec2'
     | 'secretsmanager'
     | 'cognito'
     | 'rds'
