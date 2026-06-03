@@ -7,6 +7,7 @@ import {AwsStorageAdapter} from './adapter-aws/AwsStorageAdapter'
 import {AzureStorageAdapter} from './adapter-azure/AzureStorageAdapter'
 import {GcpStorageAdapter} from './adapter-gcp/GcpStorageAdapter'
 import {CloudProxyService} from './service/CloudProxyService'
+import {AwsServerlessAdapter} from './adapter-aws/AwsServerlessAdapter'
 
 export function createCloudProxyService(): CloudProxyService {
     const registry = new CloudAdapterRegistry([
@@ -15,6 +16,7 @@ export function createCloudProxyService(): CloudProxyService {
         new AwsDatabaseAdapter(),
         new AwsComputeAdapter(),
         new AwsNetworkingAdapter(),
+        new AwsServerlessAdapter(),
         new AzureStorageAdapter(),
         new GcpStorageAdapter(),
     ])
