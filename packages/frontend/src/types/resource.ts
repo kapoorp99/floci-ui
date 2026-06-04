@@ -5,7 +5,8 @@ export interface CloudResource {
     name: string
     cloud: CloudProvider
     service: CloudServiceType
-    type: 'bucket' | 'container' | 'cluster' | 'db-instance' | 'instance' | 'image' | 'vpc'
+    type: 'bucket' | 'container' | 'cluster' | 'db-instance' | 'instance' | 'image' | 'vpc' | 'lambda'
+
     region: string | null
     createdAt: string | null
     status?: string | null

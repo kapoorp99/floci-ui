@@ -56,6 +56,8 @@ export function ResourceInspector({
     resource.service === "database" || resource.type === "db-instance";
   const isAwsDatabase = isDatabase && resource.cloud === "aws";
   const isK8sEngine = resource.service === "k8s" || resource.type === "cluster";
+  const isLambda =
+    resource.service === "serverless" || resource.type === "lambda";
 
   return (
     <aside className="resource-inspector">
@@ -88,6 +90,22 @@ export function ResourceInspector({
           />
         )}
         <InspectorItem label="Tags" value={`${tags.length}`} />
+        {isLambda && (
+          <>
+            <InspectorItem
+              label="Runtime"
+              value={getStringMetadata(resource.metadata.runtime) ?? "-"}
+            />
+            <InspectorItem
+              label="Handler"
+              value={getStringMetadata(resource.metadata.handler) ?? "-"}
+            />
+            <InspectorItem
+              label="Package Type"
+              value={getStringMetadata(resource.metadata.packageType) ?? "-"}
+            />
+          </>
+        )}
       </div>
       <section className="inspector-section">
         <p className="metric-label">Tags</p>
@@ -118,6 +136,37 @@ export function ResourceInspector({
       )}
       {isK8sEngine && (
         <K8sEngineDetails cloud={resource.cloud} clusterName={resource.name} />
+      )}
+      {isLambda && (
+        <section className="inspector-section">
+          <p className="metric-label">Lambda Details</p>
+          <div className="inspector-grid compact-grid">
+            <InspectorItem
+              label="ARN"
+              value={getStringMetadata(resource.metadata.arn) ?? "-"}
+            />
+            <InspectorItem
+              label="Last Modified"
+              value={getStringMetadata(resource.metadata.lastModified) ?? "-"}
+            />
+            <InspectorItem
+              label="Memory"
+              value={
+                getNumberMetadata(resource.metadata.memorySize) === null
+                  ? "-"
+                  : `${getNumberMetadata(resource.metadata.memorySize)} MB`
+              }
+            />
+            <InspectorItem
+              label="Timeout"
+              value={
+                getNumberMetadata(resource.metadata.timeout) === null
+                  ? "-"
+                  : `${getNumberMetadata(resource.metadata.timeout)}s`
+              }
+            />
+          </div>
+        </section>
       )}
       <pre className="metadata-block">
         {JSON.stringify(resource.metadata, null, 2)}
