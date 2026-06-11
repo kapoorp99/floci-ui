@@ -42,7 +42,6 @@ import type {
   ServiceSchema,
 } from "@/types/schema";
 import { CosmosNoSqlPanel } from "@/components/CosmosNoSqlPanel";
-import { ServerlessPanel } from "@/components/ServerlessPanel";
 
 interface DynamicResourceViewProps {
   cloud: CloudProvider;
@@ -398,13 +397,6 @@ export function DynamicResourceView({
       )}
       {service === "networking" && (
         <NetworkingPanel
-          cloud={cloud}
-          resource={activeSelected}
-          runtimeReachable={runtimeReachable}
-        />
-      )}
-      {service === "serverless" && (
-        <ServerlessPanel
           cloud={cloud}
           resource={activeSelected}
           runtimeReachable={runtimeReachable}
