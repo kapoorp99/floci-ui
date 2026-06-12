@@ -1265,6 +1265,210 @@ pre,
     grid-template-columns: repeat(2, minmax(180px, 1fr));
 }
 
+.cosmos-panel {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.85fr) minmax(420px, 1.5fr) minmax(340px, 1fr);
+    gap: 10px;
+    min-height: 360px;
+}
+
+.cosmos-column {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--elevated);
+    overflow: hidden;
+}
+
+.cosmos-column--wide {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.cosmos-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cosmos-panel-header svg {
+    color: var(--link);
+    flex: 0 0 auto;
+}
+
+.cosmos-panel-header span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cosmos-panel-header small {
+    color: var(--text-2);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cosmos-panel-header strong {
+    overflow: hidden;
+    color: var(--text-bright);
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cosmos-panel-header em {
+    color: var(--text-3);
+    font-size: 10px;
+    font-style: normal;
+}
+
+.cosmos-inline-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px auto;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--raised);
+}
+
+.cosmos-inline-form .input,
+.cosmos-toolbar .input {
+    min-width: 0;
+    width: 100%;
+}
+
+.cosmos-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.cosmos-list-row {
+    width: 100%;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 0;
+    border-bottom: 1px solid var(--border-faint);
+    background: transparent;
+    color: var(--text);
+    padding: 9px 12px;
+    text-align: left;
+}
+
+.cosmos-list-row:hover,
+.cosmos-list-row.selected {
+    background: var(--hover-md);
+}
+
+.cosmos-list-row span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.cosmos-list-row strong {
+    overflow: hidden;
+    color: var(--text-bright);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cosmos-list-row small {
+    color: var(--text-2);
+    font-size: 10px;
+}
+
+.cosmos-list-row svg {
+    color: #f87171;
+    flex: 0 0 auto;
+}
+
+.cosmos-list-row em {
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 4px;
+    color: #f87171;
+    padding: 4px 7px;
+    font-size: 11px;
+    font-style: normal;
+}
+
+.padded {
+    padding: 12px;
+}
+
+.cosmos-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--raised);
+}
+
+.cosmos-items-table {
+    min-height: 0;
+    overflow: auto;
+}
+
+.cosmos-items-table .table tr.selected td {
+    background: var(--link-tint);
+}
+
+.textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    padding: 8px 10px;
+    outline: none;
+    resize: vertical;
+}
+
+.textarea:focus {
+    border-color: var(--link);
+}
+
+.code-textarea {
+    min-height: 180px;
+    font-family: "Space Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.code-textarea.small {
+    min-height: 82px;
+}
+
+.cosmos-editor,
+.cosmos-query {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cosmos-query-result {
+    max-height: 180px;
+    overflow: auto;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    padding: 9px 10px;
+    font-size: 11px;
+}
+
 .launch-form {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2551,25 +2755,6 @@ button.console-service-card {
     border-bottom: 1px solid var(--link-tint-border);
 }
 
-/* ─── SQS send-message panel ─────────────────────────────────────────────── */
-.send-panel textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 8px 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: "Space Mono", "JetBrains Mono", Consolas, monospace;
-    font-size: 12px;
-    resize: vertical;
-    outline: none;
-}
-
-.send-panel textarea:focus {
-    border-color: var(--link);
-}
-
 .button.primary {
     background: #3949ab;
     border-color: #3949ab;
@@ -2589,28 +2774,6 @@ button.console-service-card {
 
 .button.danger:hover {
     background: rgba(239, 68, 68, 0.25);
-}
-
-/* ─── Create bucket inline bar ──────────────────────────────────────────── */
-.create-bucket-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--accent-tint-faint);
-    border-bottom: 1px solid var(--accent-tint-border);
-}
-
-/* ─── Bucket list: action buttons visible on hover ──────────────────────── */
-.bucket-action-btn {
-    opacity: 0;
-    transition: opacity 100ms;
-}
-
-.list-item:hover .bucket-action-btn,
-.list-item.active .bucket-action-btn,
-tr:hover .bucket-action-btn {
-    opacity: 1;
 }
 
 /* ─── Bulk-select action bar ─────────────────────────────────────────────── */
@@ -2689,63 +2852,6 @@ tr:hover .bucket-action-btn {
     word-break: break-all;
 }
 
-/* ─── Versioning toggle switch ───────────────────────────────────────────── */
-.versioning-toggle {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 8px 0;
-}
-
-.toggle-switch {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-    position: absolute;
-}
-
-.toggle-track {
-    position: absolute;
-    inset: 0;
-    background: var(--border);
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background 150ms;
-}
-
-.toggle-track::after {
-    content: '';
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    left: 3px;
-    top: 3px;
-    background: white;
-    border-radius: 999px;
-    transition: left 150ms;
-}
-
-.toggle-switch input:checked + .toggle-track {
-    background: #3949ab;
-}
-
-.toggle-switch input:checked + .toggle-track::after {
-    left: 19px;
-}
-
-.toggle-switch input:disabled + .toggle-track {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 /* ─── Copy object modal ──────────────────────────────────────────────────── */
 .copy-modal-overlay {
     position: fixed;
@@ -2808,87 +2914,7 @@ tr:hover .bucket-action-btn {
     cursor: pointer;
 }
 
-/* ─── DynamoDB key schema badge row ─────────────────────────────────────── */
-.key-schema-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--elevated);
-}
-
-.key-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-family: "Space Mono", "JetBrains Mono", Consolas, monospace;
-    border: 1px solid var(--border);
-    background: var(--raised);
-}
-
-.key-badge.hash {
-    border-color: rgba(250, 204, 21, 0.35);
-    background: rgba(250, 204, 21, 0.07);
-    color: #fbbf24;
-}
-
-.key-badge.range {
-    border-color: rgba(167, 139, 250, 0.35);
-    background: rgba(167, 139, 250, 0.07);
-    color: #a78bfa;
-}
-
-/* ─── DynamoDB query bar ─────────────────────────────────────────────────── */
-.dynamo-query-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-}
-
-.dynamo-query-bar label {
-    font-size: 11px;
-    color: var(--text-2);
-    white-space: nowrap;
-}
-
-.dynamo-query-bar .input {
-    min-width: unset;
-    width: 160px;
-}
-
-/* ─── Item JSON editor ───────────────────────────────────────────────────── */
-.json-editor {
-    width: 100%;
-    min-height: 260px;
-    padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: "Space Mono", "JetBrains Mono", Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    resize: vertical;
-    outline: none;
-}
-
-.json-editor:focus {
-    border-color: var(--link);
-}
-
-.json-editor.error {
-    border-color: #ef4444;
-}
-
-/* ─── Create table modal ─────────────────────────────────────────────────── */
+/* ─── Shared modal styles ────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -2963,142 +2989,7 @@ tr:hover .bucket-action-btn {
     justify-content: flex-end;
 }
 
-/* ─── SNS ──────────────────────────────────────────────────────────────────── */
-
-.sns-layout {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.sns-sidebar {
-    width: 280px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.sns-sidebar-header {
-    padding: 14px 16px 10px;
-    border-bottom: 1px solid var(--border-faint);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.sns-sidebar-header h2 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-bright);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.sns-topic-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px 0;
-}
-
-.sns-topic-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 16px;
-    cursor: pointer;
-    border-left: 3px solid transparent;
-    transition: background 0.15s;
-    gap: 8px;
-}
-
-.sns-topic-item:hover {
-    background: var(--hover);
-}
-
-.sns-topic-item.selected {
-    border-left-color: var(--accent);
-    background: var(--accent-tint-faint);
-}
-
-.sns-topic-item-name {
-    flex: 1;
-    font-size: 13px;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.sns-topic-item-del {
-    opacity: 0;
-    background: none;
-    border: none;
-    padding: 2px 4px;
-    cursor: pointer;
-    color: var(--text-3);
-    border-radius: 4px;
-    font-size: 14px;
-    line-height: 1;
-    transition: opacity 0.15s, color 0.15s;
-    flex-shrink: 0;
-}
-
-.sns-topic-item:hover .sns-topic-item-del {
-    opacity: 1;
-}
-
-.sns-topic-item-del:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.sns-main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.sns-main-header {
-    padding: 14px 20px 10px;
-    border-bottom: 1px solid var(--border-faint);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.sns-main-header h3 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-bright);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.sns-arn-chip {
-    font-size: 11px;
-    color: var(--text-2);
-    background: var(--raised);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-family: monospace;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 300px;
-    cursor: default;
-}
-
+/* ─── Shared drawer tabs ─────────────────────────────────────────────────── */
 .sns-tabs {
     display: flex;
     border-bottom: 1px solid var(--border-faint);
@@ -3124,145 +3015,4 @@ tr:hover .bucket-action-btn {
 
 .sns-tab:hover:not(.active) {
     color: var(--text);
-}
-
-.sns-tab-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.sns-sub-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--raised);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    min-width: 0;
-}
-
-.sns-sub-protocol {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--link-tint);
-    border: 1px solid var(--link-tint-border);
-    color: var(--link);
-    flex-shrink: 0;
-    text-transform: uppercase;
-}
-
-.sns-sub-endpoint {
-    flex: 1;
-    font-size: 12px;
-    color: var(--text);
-    font-family: monospace;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-}
-
-.sns-sub-del {
-    background: none;
-    border: none;
-    padding: 2px 4px;
-    cursor: pointer;
-    color: var(--text-3);
-    border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
-    flex-shrink: 0;
-}
-
-.sns-sub-del:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.subscribe-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px 16px;
-    background: var(--raised);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-}
-
-.subscribe-form-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-2);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.subscribe-form-row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.publish-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.publish-result {
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-family: monospace;
-}
-
-.publish-result.success {
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.25);
-    color: #4ade80;
-}
-
-.publish-result.error {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    color: #f87171;
-}
-
-.sns-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--text-3);
-    font-size: 13px;
-}
-
-.sns-empty svg {
-    opacity: 0.3;
-}
-
-.create-topic-modal {
-    background: var(--elevated);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
-    width: 420px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.create-topic-modal h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-bright);
 }

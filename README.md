@@ -15,7 +15,7 @@ development also needs a visual layer:
 - See which local cloud runtime the UI is connected to.
 - Browse real local cloud resources without leaving the browser.
 - Inspect service state without inventing resources.
-- Use CloudWatch logs and metrics as the telemetry surface.
+- Keep observability and inspection explicit through the Cloud Explorer and future telemetry adapters.
 - Keep unsupported screens explicit instead of hiding gaps behind dummy data.
 
 ## Project Vision
@@ -158,20 +158,20 @@ Current limitations:
 ## Current Cloud Service Status
 
 These percentages describe UI coverage in the current frontend, grouped by the `Cloud Services` navigation model. They
-do not describe backend completeness. A category can have a mature AWS-specific page while still being only partially
-integrated into the unified Cloud Explorer model.
+do not describe backend completeness. Dedicated AWS pages have been removed; active work now belongs in the
+Cloud Explorer and its proxy/adapters.
 
 | Category | AWS | Azure | GCP | Current UI status |
 |---|---:|---:|---:|---|
-| Storage | 95% | 80% | Coming soon | Unified Cloud Explorer support for AWS S3 and Azure Blob Storage. Buckets/containers, object browsing, upload, download, delete, folder prefixes, metadata, and inspector are wired. AWS still has a richer legacy S3 page for bucket tags, object tags, versioning, copy, and bulk delete. |
+| Storage | 95% | 80% | Coming soon | Unified Cloud Explorer support for AWS S3 and Azure Blob Storage. Buckets/containers, object browsing, upload, download, delete, folder prefixes, metadata, and inspector are wired. |
 | Compute | 70% | Coming soon | Coming soon | AWS Compute is available under `/cloud-explorer/aws/compute`. It lists EC2 instances and AMIs, exposes launch/lifecycle actions through the Compute panel, supports console output, tags, AMI creation, and terminate/start/stop/reboot flows. Azure and GCP compute adapters are placeholders. |
 | Networking | 75% | Coming soon | Coming soon | AWS Networking is available under `/cloud-explorer/aws/networking`. The panel exposes VPCs, subnets, security groups, internet gateways, NAT gateways, route tables, elastic IPs, and a VPC wizard through EC2-backed APIs. Azure VNet and GCP VPC support are placeholders. |
-| k8s Engine | 35% | Coming soon | Coming soon | AWS EKS can be listed and inspected through the Cloud Explorer adapter and the dedicated EKS page. Cluster creation and node group management are not yet surfaced. |
-| Database | 45% | Coming soon | Coming soon | AWS database support focuses on RDS and DynamoDB. RDS is list/inspect oriented, while DynamoDB has a mature AWS-specific table/item UI. A normalized multi-cloud database model is still in progress. |
-| Queue | 100% AWS legacy | Coming soon | Coming soon | AWS SQS has a mature AWS-specific page for queue lifecycle, messages, tags, settings, DLQ configuration, and redrive. It is not yet exposed as a unified Cloud Explorer `queue` service. |
-| Function | 90% AWS legacy | Coming soon | Coming soon | AWS Lambda has a mature AWS-specific page for list, inspect, invoke, log tail, environment variables, and delete. It is not yet exposed as a unified Cloud Explorer `function/serverless` service in the frontend sidebar. |
-| Events | 90% AWS legacy | Coming soon | Coming soon | AWS SNS has a mature AWS-specific page for topics, subscriptions, and publish. A normalized eventing category is not wired yet. |
-| Observability | 90% AWS legacy | Coming soon | Coming soon | AWS CloudWatch has a mature AWS-specific page for logs, metrics list, alarms list, and Floci request ingestion. A normalized multi-cloud observability category is not wired yet. |
+| k8s Engine | 35% | Coming soon | Coming soon | AWS EKS can be listed and inspected through the Cloud Explorer adapter and transitional EKS details. Cluster creation and node group management are not yet surfaced. |
+| Database | 60% | 65% | Coming soon | AWS RDS list/inspect and Azure Cosmos DB NoSQL are wired through Cloud Explorer paths. Cosmos supports databases, containers, documents, and SQL query workflows when the runtime supports them. |
+| Queue | Coming soon | Coming soon | Coming soon | No unified queue adapter is currently exposed in the UI. AWS SQS legacy UI was removed and should be rebuilt through Cloud Explorer contracts. |
+| Function | Coming soon | Coming soon | Coming soon | No unified function adapter is currently exposed in the UI. AWS Lambda legacy UI was removed and should be rebuilt through Cloud Explorer contracts. |
+| Events | Coming soon | Coming soon | Coming soon | No unified events adapter is currently exposed in the UI. AWS SNS legacy UI was removed and should be rebuilt through Cloud Explorer contracts. |
+| Observability | Coming soon | Coming soon | Coming soon | No unified observability adapter is currently exposed in the UI. AWS CloudWatch legacy UI and request ingestion were removed from the frontend/backend legacy surface. |
 | Security / Identity | 80% AWS legacy (Secrets Manager) | Coming soon | Coming soon | AWS Secrets Manager has a dedicated page for listing secrets, inspecting metadata, revealing/editing values, creating, and deleting. IAM, KMS, Cognito, and Systems Manager remain placeholders in the UI. |
 
 Connected Cloud Explorer categories today:
@@ -180,18 +180,10 @@ Connected Cloud Explorer categories today:
 - Compute: AWS EC2.
 - Networking: AWS VPC/networking resources.
 - k8s Engine: AWS EKS.
-- Database: AWS RDS/DynamoDB-oriented support.
+- Database: AWS RDS and Azure Cosmos DB NoSQL.
 
 AWS-specific legacy pages still available today:
 
-- CloudWatch
-- S3
-- SQS
-- Lambda
-- DynamoDB
-- SNS
-- EKS
-- RDS
 - Secrets Manager
 
 Placeholder or not-yet-normalized categories today:
@@ -218,23 +210,14 @@ Cloud Explorer support:
 - Azure folder markers are hidden and rendered as navigable folders.
 - Size and last-modified metadata are normalized for AWS objects and Azure blobs when the runtime returns them.
 
-AWS-specific S3 page still adds:
-
-- Bucket tags.
-- Object tags.
-- Bucket versioning.
-- Copy object.
-- Bulk delete.
-- Rich bucket/object lifecycle controls.
-
 Remaining gaps:
 
 | Gap | Notes |
 |---|---|
 | GCP Storage | Coming soon |
 | Azure bucket/container advanced settings | Tags, access policy, and metadata editing are not yet exposed |
-| Unified bulk actions | Multi-select and bulk delete are richer in the AWS S3 page than the Cloud Explorer storage view |
-| Version browser | AWS versioning can be toggled in legacy S3, but object version browsing is not wired |
+| Unified bulk actions | Multi-select and bulk delete are not yet exposed in the Cloud Explorer storage view |
+| Version browser | Object version browsing is not wired |
 
 </details>
 
@@ -347,24 +330,30 @@ Remaining gaps:
 AWS support:
 
 - AWS Database adapter exists for normalized Cloud Explorer list/inspect.
-- RDS page exists for AWS-focused database instance inspection.
-- DynamoDB page exists as a mature AWS-specific table/item UI.
-- DynamoDB supports table lifecycle, scan/query, create/edit/delete item, and typed value rendering.
+- RDS list/inspect is available through transitional Cloud Explorer database details.
+
+Azure support:
+
+- Azure Cosmos DB NoSQL adapter exists for Cloud Explorer database workflows.
+- Database list/create/delete.
+- Container list/create/delete after a database is selected.
+- Document create/edit/delete after a container is selected.
+- SQL query editor for documents/items.
 
 Provider status:
 
 | Provider | Status |
 |---|---|
-| AWS | RDS list/inspect plus mature DynamoDB legacy page |
-| Azure | Coming soon |
+| AWS | RDS list/inspect |
+| Azure | Cosmos DB NoSQL workflows |
 | GCP | Coming soon |
 
 Remaining gaps:
 
 | Gap | Notes |
 |---|---|
-| Unified database resource model | RDS and DynamoDB have different shapes and are not fully normalized into one category yet |
-| Azure database services | Not implemented |
+| Unified database resource model | RDS and Cosmos DB have different shapes and are not fully normalized into one category yet |
+| AWS document/table databases | DynamoDB legacy UI was removed and should be rebuilt through Cloud Explorer contracts |
 | GCP database services | Not implemented |
 
 </details>
@@ -374,78 +363,24 @@ Remaining gaps:
 
 ### Queue
 
-AWS SQS has a mature AWS-specific page:
-
-- Queue lifecycle.
-- FIFO-aware send message.
-- Batch send.
-- Peek and delete messages.
-- Queue tags.
-- Editable queue configuration.
-- Dead-letter queue configuration and redrive.
-
-Known limitation:
-
-| Feature | Status |
-|---|---|
-| Redrive task history | Floci core accepts `StartMessageMoveTask`, but `ListMessageMoveTasks` currently returns no results |
-| Per-message visibility control | `ChangeMessageVisibility` is not surfaced |
+Queue is currently a Cloud Explorer placeholder. AWS SQS legacy UI has been removed. The next implementation should add
+a normalized queue adapter, schema, resource table, message inspector, and lifecycle actions through `/api/clouds/*`.
 
 ### Function
 
-AWS Lambda has a mature AWS-specific page:
-
-- List and filter functions.
-- Detail drawer.
-- Runtime/state/configuration metadata.
-- Environment variables.
-- Invoke with JSON payload.
-- Response display and log tail.
-- Delete function.
-
-Remaining gaps:
-
-| Feature | Status |
-|---|---|
-| Create function | Not surfaced |
-| Event source mappings | Not surfaced |
-| Aliases and versions | Not surfaced |
+Function is currently a Cloud Explorer placeholder. AWS Lambda legacy UI has been removed. The next implementation
+should add a normalized function adapter, schema, list/inspect/invoke actions, and runtime logs through the proxy.
 
 ### Events
 
-AWS SNS has a mature AWS-specific page:
-
-- Topic lifecycle.
-- Standard and FIFO topic creation.
-- Subscription list/manage.
-- Publish message with optional subject.
-
-Remaining gaps:
-
-| Feature | Status |
-|---|---|
-| Topic attributes | Not fully surfaced |
-| Topic tags | Not surfaced |
-| Subscription filter policies | Not surfaced |
+Events are currently not exposed as a unified Cloud Explorer category. AWS SNS legacy UI has been removed. The next
+implementation should define event/topic contracts before adding provider-specific adapters.
 
 ### Observability
 
-AWS CloudWatch has a mature AWS-specific page:
-
-- Log group lifecycle.
-- Log stream browsing.
-- Log event browsing and search.
-- Floci request ingestion into `/floci/{service}` log groups.
-- Metrics list.
-- Alarms list.
-
-Remaining gaps:
-
-| Feature | Status |
-|---|---|
-| Metric graphing | Not surfaced |
-| Alarm create/edit | Not surfaced |
-| Manual `PutLogEvents` | Not surfaced |
+Observability is currently not exposed as a unified Cloud Explorer category. AWS CloudWatch legacy routes and frontend
+pages have been removed. The next implementation should define provider-neutral logs, metrics, and request inspection
+contracts.
 
 </details>
 
@@ -607,6 +542,70 @@ credentials, but Floci does not require real AWS credentials.
 pnpm lint
 pnpm type-check
 pnpm build
+```
+
+## Troubleshooting
+
+### "Runtime unavailable" error
+
+If the UI shows "Runtime unavailable" or "The AWS Access Key Id you provided does not exist in our records", check the following:
+
+#### 1. AWS credentials mismatch
+
+The AWS credentials in `packages/api/.env` must match the credentials configured in your Floci container. By default, Floci uses `test`/`test`:
+
+```bash
+# Check Floci container credentials
+docker inspect floci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep AWS
+
+# Ensure packages/api/.env has matching credentials
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+```
+
+#### 2. Missing .env file in packages/api
+
+The API server runs from `packages/api/` and uses `dotenv/config` to load environment variables. If `.env` only exists in the project root, the API will not find it.
+
+Copy `.env` to the API package directory:
+
+```bash
+cp .env packages/api/.env
+```
+
+Then restart the API server:
+
+```bash
+pnpm dev:api
+```
+
+#### 3. Verify connectivity
+
+Check that all services are reachable:
+
+```bash
+# Floci core
+curl http://localhost:4566/_localstack/health
+
+# API server
+curl http://localhost:3001/api/clouds/aws/status
+```
+
+The API response should show `"runtime": "reachable"` and `"error": null`.
+
+### Docker Compose network error
+
+When using `docker-compose.dev.yml`, you may encounter:
+
+```
+network floci_default declared as external, but could not be found
+```
+
+The compose file declares `floci_default` as an external network. Create it manually before running `docker compose up`:
+
+```bash
+docker network create floci_default
+docker compose -f docker-compose.dev.yml up
 ```
 
 ## Design Direction

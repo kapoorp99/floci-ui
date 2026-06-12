@@ -28,59 +28,23 @@ export const apiEndpointKeys = {
         copy: "clouds.services.storage.objects.copy",
       },
     },
+    database: {
+      cosmos: {
+        containers: {
+          list: "clouds.services.database.cosmos.containers.list",
+          create: "clouds.services.database.cosmos.containers.create",
+          delete: "clouds.services.database.cosmos.containers.delete",
+        },
+        items: {
+          list: "clouds.services.database.cosmos.items.list",
+          upsert: "clouds.services.database.cosmos.items.upsert",
+          delete: "clouds.services.database.cosmos.items.delete",
+          query: "clouds.services.database.cosmos.items.query",
+        },
+      },
+    },
   },
   aws: {
-    s3: {
-      buckets: {
-        list: "aws.s3.buckets.list",
-        create: "aws.s3.buckets.create",
-        delete: "aws.s3.buckets.delete",
-        getBucketTagging: "aws.s3.buckets.get-bucket-tagging",
-        getBucketVersioning: "aws.s3.buckets.get-bucket-versioning",
-        versioning: {
-          get: "aws.s3.buckets.get-bucket-versioning",
-          put: "aws.s3.buckets.versioning.put",
-        },
-        tags: {
-          get: "aws.s3.buckets.get-bucket-tagging",
-          put: "aws.s3.buckets.tags.put",
-        },
-      },
-      objects: {
-        list: "aws.s3.objects.list",
-        upload: "aws.s3.objects.upload",
-        delete: "aws.s3.objects.delete",
-        deleteMany: "aws.s3.objects.delete-many",
-        copy: "aws.s3.objects.copy",
-        metadata: "aws.s3.objects.metadata",
-        tags: {
-          get: "aws.s3.objects.tags.get",
-          put: "aws.s3.objects.tags.put",
-        },
-      },
-    },
-    cloudwatch: {
-      logGroups: {
-        list: "aws.cloudwatch.log-groups.list",
-        create: "aws.cloudwatch.log-groups.create",
-        delete: "aws.cloudwatch.log-groups.delete",
-      },
-      logStreams: {
-        list: "aws.cloudwatch.log-streams.list",
-        create: "aws.cloudwatch.log-streams.create",
-        delete: "aws.cloudwatch.log-streams.delete",
-      },
-      logEvents: {
-        list: "aws.cloudwatch.log-events.list",
-        put: "aws.cloudwatch.log-events.put",
-      },
-      alarms: {
-        list: "aws.cloudwatch.alarms.list",
-      },
-      metrics: {
-        list: "aws.cloudwatch.metrics.list",
-      },
-    },
     eks: {
       clusters: {
         list: "aws.eks.clusters.list",
@@ -308,208 +272,60 @@ export const endpointRegistry: EndpointRegistry = new Map([
       telemetry: { service: "cloud-proxy" },
     },
   ],
-
-  // AWS S3
   [
-    apiEndpointKeys.aws.s3.buckets.list,
+    apiEndpointKeys.clouds.database.cosmos.containers.list,
     {
-      path: "/s3/buckets",
+      path: "/clouds/:cloud/services/database/resources/:id/containers",
       method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.buckets.create,
+    apiEndpointKeys.clouds.database.cosmos.containers.create,
     {
-      path: "/s3/buckets",
+      path: "/clouds/:cloud/services/database/resources/:id/containers",
       method: "POST",
-      telemetry: { provider: "aws", service: "s3" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.buckets.delete,
+    apiEndpointKeys.clouds.database.cosmos.containers.delete,
     {
-      path: "/s3/:bucket",
+      path: "/clouds/:cloud/services/database/resources/:id/containers/:containerId",
       method: "DELETE",
-      telemetry: { provider: "aws", service: "s3" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.objects.list,
+    apiEndpointKeys.clouds.database.cosmos.items.list,
     {
-      path: "/s3/:bucket/objects",
+      path: "/clouds/:cloud/services/database/resources/:id/containers/:containerId/items",
       method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.objects.upload,
+    apiEndpointKeys.clouds.database.cosmos.items.upsert,
     {
-      path: "/s3/:bucket/object",
-      method: "PUT",
-      telemetry: { provider: "aws", service: "s3" },
+      path: "/clouds/:cloud/services/database/resources/:id/containers/:containerId/items",
+      method: "POST",
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.objects.delete,
+    apiEndpointKeys.clouds.database.cosmos.items.delete,
     {
-      path: "/s3/:bucket/object",
+      path: "/clouds/:cloud/services/database/resources/:id/containers/:containerId/items/:itemId",
       method: "DELETE",
-      telemetry: { provider: "aws", service: "s3" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
   [
-    apiEndpointKeys.aws.s3.objects.deleteMany,
+    apiEndpointKeys.clouds.database.cosmos.items.query,
     {
-      path: "/s3/:bucket/objects/delete",
+      path: "/clouds/:cloud/services/database/resources/:id/containers/:containerId/query",
       method: "POST",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.objects.copy,
-    {
-      path: "/s3/copy",
-      method: "POST",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.objects.metadata,
-    {
-      path: "/s3/:bucket/object/metadata",
-      method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.objects.tags.get,
-    {
-      path: "/s3/:bucket/object/tags",
-      method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.objects.tags.put,
-    {
-      path: "/s3/:bucket/object/tags",
-      method: "PUT",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.buckets.getBucketVersioning,
-    {
-      path: "/s3/:bucket/versioning",
-      method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.buckets.versioning.put,
-    {
-      path: "/s3/:bucket/versioning",
-      method: "PUT",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.buckets.getBucketTagging,
-    {
-      path: "/s3/:bucket/tags",
-      method: "GET",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.s3.buckets.tags.put,
-    {
-      path: "/s3/:bucket/tags",
-      method: "PUT",
-      telemetry: { provider: "aws", service: "s3" },
-    },
-  ],
-
-  // AWS CloudWatch
-  [
-    apiEndpointKeys.aws.cloudwatch.logGroups.list,
-    {
-      path: "/cloudwatch/log-groups",
-      method: "GET",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logGroups.create,
-    {
-      path: "/cloudwatch/log-groups",
-      method: "POST",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logGroups.delete,
-    {
-      path: "/cloudwatch/log-groups",
-      method: "DELETE",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logStreams.list,
-    {
-      path: "/cloudwatch/log-streams",
-      method: "GET",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logStreams.create,
-    {
-      path: "/cloudwatch/log-streams",
-      method: "POST",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logStreams.delete,
-    {
-      path: "/cloudwatch/log-streams",
-      method: "DELETE",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logEvents.list,
-    {
-      path: "/cloudwatch/log-events",
-      method: "GET",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.logEvents.put,
-    {
-      path: "/cloudwatch/log-events",
-      method: "POST",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.alarms.list,
-    {
-      path: "/cloudwatch/alarms",
-      method: "GET",
-      telemetry: { provider: "aws", service: "cloudwatch" },
-    },
-  ],
-  [
-    apiEndpointKeys.aws.cloudwatch.metrics.list,
-    {
-      path: "/cloudwatch/metrics",
-      method: "GET",
-      telemetry: { provider: "aws", service: "cloudwatch" },
+      telemetry: { service: "cloud-proxy" },
     },
   ],
 

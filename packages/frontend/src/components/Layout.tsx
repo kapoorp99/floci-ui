@@ -1,50 +1,21 @@
 import {NavLink, Outlet, useLocation} from 'react-router-dom'
 import {
-    AreaChart,
-    Bell,
-    Cpu,
     Database,
-    KeyRound,
     Boxes,
     LayoutDashboard,
-    Lock,
     MessageSquare,
     Moon,
     Network,
     Search,
     Server,
-    Shield,
-    SlidersHorizontal,
     Sun,
     Table2,
-    Users,
     Zap,
 } from 'lucide-react'
 import flociLogo from '@/assets/floci.png'
 import {useTheme} from '@/lib/useTheme'
 import {useQuery} from '@tanstack/react-query'
-import {fetchHealth, SERVICE_META} from '@/api/services'
-
-import type {ServiceName} from '@/api/types'
-import {useCloudWatchIngestor} from '@/features/cloudwatch/hooks/useCloudWatchIngestor'
-
-const ICONS: Record<ServiceName | 'dashboard', React.ElementType> = {
-    dashboard: LayoutDashboard,
-    cloudwatch: AreaChart,
-    s3: Database,
-    sqs: MessageSquare,
-    dynamodb: Table2,
-    sns: Bell,
-    lambda: Zap,
-    eks: Boxes,
-    secretsmanager: KeyRound,
-    cognito: Users,
-    rds: Database,
-    elasticache: Cpu,
-    iam: Shield,
-    ssm: SlidersHorizontal,
-    kms: Lock,
-}
+import {getCloudStatus} from '@/api/cloudProxyClient'
 
 function NavItem({to, icon, label}: { to: string; icon: React.ElementType; label: string }) {
     const Icon = icon
@@ -90,7 +61,9 @@ function CloudServiceNav() {
             <span className="nav-label">Cloud Services · {cloudLabel}</span>
             {CLOUD_SERVICE_ITEMS.map((service) => {
                 const Icon = CLOUD_SERVICE_ICONS[service.name]
-               const available = service.name === 'storage' || ((service.name === 'k8s' || service.name === 'database' || service.name === 'compute' || service.name === 'networking' || service.name === 'serverless') && cloud === 'aws')
+                const available = service.name === 'storage'
+                    || (service.name === 'database' && (cloud === 'aws' || cloud === 'azure'))
+                    || ((service.name === 'k8s' || service.name === 'compute' || service.name === 'networking' || service.name === 'serverless') && cloud === 'aws')
                 if (service.route && available) {
                     return <NavItem key={service.name} to={`/cloud-explorer/${cloud}/${service.route}`} icon={Icon} label={service.label}/>
                 }
@@ -112,16 +85,14 @@ export function Layout() {
     const activeCloud = activeCloudFromPath(location.pathname)
     const {theme, toggle} = useTheme()
     const {data, isError} = useQuery({
-        queryKey: ['health', activeCloud],
-        queryFn: ({signal}) => fetchHealth(signal, activeCloud),
+        queryKey: ['cloud-status', activeCloud],
+        queryFn: ({signal}) => getCloudStatus(activeCloud, signal),
         refetchInterval: 5000
     })
-    const status = isError ? 'unavailable' : data?.status ?? 'unknown'
-    const isConnected = status === 'healthy' || status === 'degraded'
-    const connectionLabel = isConnected ? 'Connected' : 'No connected'
-
-    // Auto-ingest all Floci service activity into CloudWatch Logs
-    useCloudWatchIngestor()
+    const status = isError ? 'unavailable' : data?.runtime ?? 'unknown'
+    const isConnected = status === 'reachable'
+    const connectionLabel = isConnected ? 'Connected' : 'Not connected'
+    const connectionTarget = data?.endpoint ?? activeCloud
 
     return (
         <div className="app">
@@ -139,16 +110,9 @@ export function Layout() {
                 <nav className="nav">
                     <div className="nav-section">
                         <span className="nav-label">General</span>
-                        <NavItem to={`/console/${activeCloud}`} icon={ICONS.dashboard} label="Console Home"/>
+                        <NavItem to={`/console/${activeCloud}`} icon={LayoutDashboard} label="Console Home"/>
                     </div>
                     <CloudServiceNav/>
-                    <div className="nav-section">
-                        <span className="nav-label">Legacy AWS Services</span>
-                        {SERVICE_META.map((service) => (
-                            <NavItem key={service.name} to={service.route} icon={ICONS[service.name]}
-                                     label={service.displayName}/>
-                        ))}
-                    </div>
                 </nav>
 
                 <div className="sidebar-footer">Floci DevTools · Local</div>
@@ -167,7 +131,7 @@ export function Layout() {
                     <div className={`connection ${isConnected ? 'connected' : 'disconnected'}`}>
                         <span className={`dot ${status}`}/>
                         <span className="connection-state">{connectionLabel}</span>
-                        <span className="connection-target">floci-api</span>
+                        <span className="connection-target">{connectionTarget}</span>
                     </div>
                 </header>
                 <main className="main">

@@ -1,7 +1,5 @@
 export { EventBus } from "./EventBus";
 export { Scheduler } from "./Scheduler";
-export { CloudWatchRequestIngestor } from "./CloudWatchRequestIngestor";
-export { TelemetryRuntime, createTelemetryRuntime } from "./TelemetryRuntime";
 export {
   apiRequestEventBus,
   emitApiRequest,
