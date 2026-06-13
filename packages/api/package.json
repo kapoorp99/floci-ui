@@ -1,5 +1,6 @@
 {
   "name": "@floci/api",
+  "description": "Floci UI backend — translates the console's REST/JSON requests into cloud SDK calls against Floci runtimes.",
   "private": true,
   "type": "module",
   "scripts": {

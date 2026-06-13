@@ -1,11 +1,41 @@
-# Floci UI
+<p align="center">
+  <img src="floci-black.svg#gh-light-mode-only" alt="Floci UI" width="460" />
+  <img src="floci-white.svg#gh-dark-mode-only" alt="Floci UI" width="460" />
+</p>
 
-Floci UI is evolving into a unified local-first multi-cloud runtime explorer for
-[Floci](https://github.com/floci-io/floci) and compatible local cloud runtimes.
+<p align="center">
+  <strong>Any Cloud. Locally.</strong><br />
+  The local cloud console for <a href="https://floci.io">Floci</a> — an AWS-Console-style UI for your
+  multi-cloud runtime. No account, no mock data, just <code>docker compose up</code>.
+</p>
 
-It is designed to feel familiar to AWS Console users while staying honest about the current implementation: the UI only
-renders real data returned by Floci-compatible APIs. If a service or operation is not wired yet, the screen stays empty
-or shows an explicit placeholder. No fake resources, demo rows, or mock service data are shown in normal mode.
+<p align="center">
+  <a href="https://github.com/floci-io/floci-ui/releases/latest"><img src="https://img.shields.io/github/v/release/floci-io/floci-ui?label=latest%20release&color=blue" alt="Latest Release"></a>
+  <a href="https://github.com/floci-io/floci-ui/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/floci-io/floci-ui/ci.yml?branch=main&label=ci" alt="CI Status"></a>
+  <a href="https://hub.docker.com/r/floci/floci-ui"><img src="https://img.shields.io/docker/pulls/floci/floci-ui?label=docker%20pulls" alt="Docker Pulls"></a>
+  <a href="https://hub.docker.com/r/floci/floci-ui"><img src="https://img.shields.io/docker/image-size/floci/floci-ui/latest?label=image%20size" alt="Docker Image Size"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"></a>
+  <a href="https://github.com/floci-io/floci-ui/stargazers"><img src="https://img.shields.io/github/stars/floci-io/floci-ui?style=flat" alt="GitHub Stars"></a>
+</p>
+
+<p align="center">
+  <img src="docs/images/floci-ui-console.png" alt="Floci UI console — connected to a local AWS runtime" width="900" />
+</p>
+
+Floci UI is a unified, local-first multi-cloud runtime explorer for
+[Floci](https://github.com/floci-io/floci) and compatible local cloud runtimes. It feels familiar to AWS Console
+users while staying honest about what's implemented: the UI renders only real data returned by Floci-compatible APIs.
+If a service or operation isn't wired yet, the screen stays empty or shows an explicit placeholder — no fake
+resources, demo rows, or mock service data.
+
+## Quick Start
+
+```bash
+docker compose up        # starts the frontend, API, and Floci AWS core
+```
+
+Then open **http://localhost:4500** — the console detects the local runtime automatically. See
+[Setup](#setup) for the multi-cloud profile, the manual dev workflow, and configuration.
 
 ## Why Floci UI?
 
@@ -400,6 +430,27 @@ resources or demo data.
 
 ## Setup
 
+### Run with Docker Compose (recommended)
+
+The fastest way to start the full stack — frontend, API, and the Floci emulators — is the
+single `docker-compose.yml`. Multi-cloud emulators are gated behind the `multicloud` profile,
+so the default run is AWS-only.
+
+Start the stack:
+
+```bash
+# AWS-only: floci-ui, floci-api, floci (Floci core)
+docker compose up        # or: make up
+
+# Full stack: adds floci-az (Azure), floci-gcp (GCP), and floci-seed
+docker compose --profile multicloud up   # or: make up-multicloud
+```
+
+Once running, open the UI at http://127.0.0.1:4500/. Tear everything down with `make down`
+(which also stops the multicloud services).
+
+For local development without containers, follow the manual steps below.
+
 ### Prerequisites
 
 - Node.js 20 or newer.
@@ -443,8 +494,8 @@ the local default is `FLOCI_AZURE_ACCOUNT_NAME=devstoreaccount1`.
 For local development, the UI needs all three of these components running:
 
 1. Floci core on `http://localhost:4566`.
-2. The Floci UI API backend on `http://localhost:3001` via `pnpm dev:api`.
-3. The frontend dev server on `http://localhost:3000` via `pnpm dev`.
+2. The Floci UI API backend on `http://localhost:4501` via `pnpm dev:api`.
+3. The frontend dev server on `http://localhost:4500` via `pnpm dev`.
 
 The frontend expects `/api/*` endpoints from `packages/api`, so running only `pnpm dev` is not enough.
 
@@ -470,7 +521,7 @@ VITE_MOCK_MODE=false
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
-PORT=3001
+PORT=4501
 ```
 
 `.env.example` already includes `VITE_MOCK_MODE=false` for real Floci usage.
@@ -483,7 +534,7 @@ Terminal 2:
 pnpm dev:api
 ```
 
-This starts `packages/api` on `http://localhost:3001` and points AWS SDK clients at `FLOCI_ENDPOINT`.
+This starts `packages/api` on `http://localhost:4501` and points AWS SDK clients at `FLOCI_ENDPOINT`.
 
 ### 5. Start the frontend
 
@@ -496,7 +547,7 @@ pnpm dev
 Open the UI:
 
 ```text
-http://127.0.0.1:3000/
+http://127.0.0.1:4500/
 ```
 
 ## Environment
@@ -509,7 +560,7 @@ VITE_MOCK_MODE=false
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
-PORT=3001
+PORT=4501
 ```
 
 Floci credentials can be any non-empty value for local development. They are required because the AWS SDK expects
@@ -564,28 +615,13 @@ Check that all services are reachable:
 
 ```bash
 # Floci core
-curl http://localhost:4566/_localstack/health
+curl http://localhost:4566/_floci/health
 
 # API server
-curl http://localhost:3001/api/clouds/aws/status
+curl http://localhost:4501/api/clouds/aws/status
 ```
 
 The API response should show `"runtime": "reachable"` and `"error": null`.
-
-### Docker Compose network error
-
-When using `docker-compose.dev.yml`, you may encounter:
-
-```
-network floci_default declared as external, but could not be found
-```
-
-The compose file declares `floci_default` as an external network. Create it manually before running `docker compose up`:
-
-```bash
-docker network create floci_default
-docker compose -f docker-compose.dev.yml up
-```
 
 ## Design Direction
 
@@ -611,4 +647,4 @@ When adding service UI, follow these rules:
 
 ## License
 
-This project follows the Floci ecosystem license.
+[MIT](LICENSE) — part of the [Floci](https://floci.io) ecosystem.
