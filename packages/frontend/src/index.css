@@ -2770,7 +2770,7 @@ button.console-service-card {
 .tag-drawer {
     position: fixed;
     top: 0;
-    right: -400px;
+    right: -440px;
     width: 360px;
     height: 100%;
     background: var(--surface);
