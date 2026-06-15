@@ -12,19 +12,18 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "query-vendor": [
-            "@tanstack/react-query",
-            "@tanstack/react-query-devtools",
-          ],
-          "ui-vendor": ["lucide-react"],
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (/[\\/]react-router/.test(id)) return "react-vendor";
+          if (/[\\/]react(-dom)?[\\/]/.test(id)) return "react-vendor";
+          if (/[\\/]@tanstack[\\/]/.test(id)) return "query-vendor";
+          if (/[\\/]lucide-react[\\/]/.test(id)) return "ui-vendor";
         },
       },
     },
   },
   server: {
-    port: 3000,
+    port: 4500,
     host: "0.0.0.0",
     allowedHosts: ["localhost", "127.0.0.1", "floci-ui"],
     watch: {
@@ -32,7 +31,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: process.env.API_TARGET ?? "http://localhost:3001",
+        target: process.env.API_TARGET ?? "http://localhost:4501",
         changeOrigin: true,
       },
     },
