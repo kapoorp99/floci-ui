@@ -1,4 +1,5 @@
 import {NavLink, Outlet, useLocation} from 'react-router-dom'
+import {AiAgentChat} from '@/features/ai-agent/AiAgentChat'
 import {
     Database,
     Boxes,
@@ -141,6 +142,7 @@ export function Layout() {
                     <Outlet/>
                 </main>
             </div>
+            <AiAgentChat activeCloud={activeCloud} />
         </div>
     )
 }
