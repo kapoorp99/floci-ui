@@ -69,7 +69,8 @@ function CloudServiceNav() {
                 const available = service.name === 'storage'
                     || (service.name === 'secretsmanager' && cloud === 'aws')
                     || (service.name === 'database' && (cloud === 'aws' || cloud === 'azure'))
-                    || ((service.name === 'k8s' || service.name === 'compute' || service.name === 'networking' || service.name === 'serverless') && cloud === 'aws')
+                    || ((service.name === 'k8s' || service.name === 'compute' || service.name === 'networking') && cloud === 'aws')
+                    || (service.name === 'serverless' && (cloud === 'aws' || cloud === 'azure'))
                 if (service.route && available) {
                     const target = service.route.startsWith('/') ? service.route : `/cloud-explorer/${cloud}/${service.route}`
                     return <NavItem key={service.name} to={target} icon={Icon} label={service.label}/>
@@ -130,6 +131,7 @@ export function Layout() {
                     <button className="icon-btn" onClick={toggle} title="Toggle theme">
                         {theme === 'dark' ? <Sun size={14}/> : <Moon size={14}/>}
                     </button>
+                    <div id="topbar-status" className="topbar-status"/>
                     <AccountSwitcher/>
                     <div className={`connection ${isConnected ? 'connected' : 'disconnected'}`}>
                         <span className={`dot ${status}`}/>
