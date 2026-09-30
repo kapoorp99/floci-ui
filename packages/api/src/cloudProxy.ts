@@ -4,43 +4,106 @@ import {AwsNetworkingAdapter} from './adapter-aws/AwsNetworkingAdapter'
 import {AwsDatabaseAdapter} from './adapter-aws/AwsDatabaseAdapter'
 import {AwsEksAdapter} from './adapter-aws/AwsEksAdapter'
 import {AwsStorageAdapter} from './adapter-aws/AwsStorageAdapter'
+import {AwsLogsAdapter} from './adapter-aws/AwsLogsAdapter'
+import {AzureNoSqlAdapter} from './adapter-azure/AzureNoSqlAdapter'
+import {AwsDynamoDbAdapter} from './adapter-aws/AwsDynamoDbAdapter'
 import {AzureDatabaseAdapter} from './adapter-azure/AzureDatabaseAdapter'
+import {AzureServiceBusAdapter} from './adapter-azure/AzureServiceBusAdapter'
 import {AzureStorageAdapter} from './adapter-azure/AzureStorageAdapter'
+import {AzureAksAdapter} from './adapter-azure/AzureAksAdapter'
+import {AzureComputeAdapter} from './adapter-azure/AzureComputeAdapter'
+import {AzureNetworkingAdapter} from './adapter-azure/AzureNetworkingAdapter'
 import {GcpStorageAdapter} from './adapter-gcp/GcpStorageAdapter'
 import {GcpCloudFunctionsAdapter} from './adapter-gcp/GcpCloudFunctionsAdapter'
+import {GcpCloudSqlAdapter} from './adapter-gcp/GcpCloudSqlAdapter'
+import {GcpGkeAdapter} from './adapter-gcp/GcpGkeAdapter'
+import {GcpCloudRunAdapter} from './adapter-gcp/GcpCloudRunAdapter'
+import {GcpPubSubAdapter} from './adapter-gcp/GcpPubSubAdapter'
+import {GcpSecretManagerAdapter} from './adapter-gcp/GcpSecretManagerAdapter'
+import {GcpSchedulerAdapter} from './adapter-gcp/GcpSchedulerAdapter'
+import {AwsSqsAdapter} from './adapter-aws/AwsSqsAdapter'
 import {CloudProxyService} from './service/CloudProxyService'
 import {AzureServerlessAdapter} from './adapter-azure/AzureServerlessAdapter'
+import {AzureKeyVaultAdapter} from './adapter-azure/AzureKeyVaultAdapter'
 import {AwsServerlessAdapter} from './adapter-aws/AwsServerlessAdapter'
+import {AwsParameterStoreAdapter} from './adapter-aws/AwsParameterStoreAdapter'
+import {AwsKmsAdapter} from './adapter-aws/AwsKmsAdapter'
+import {AwsStepFunctionsAdapter} from './adapter-aws/AwsStepFunctionsAdapter'
+import {AwsLoadBalancingAdapter} from './adapter-aws/AwsLoadBalancingAdapter'
+import {AwsEventBridgeAdapter} from './adapter-aws/AwsEventBridgeAdapter'
+import {AwsIamAdapter} from './adapter-aws/AwsIamAdapter'
+import {AwsCognitoAdapter} from './adapter-aws/AwsCognitoAdapter'
+import {AwsApiGatewayAdapter} from './adapter-aws/AwsApiGatewayAdapter'
+import {AwsCloudFormationAdapter} from './adapter-aws/AwsCloudFormationAdapter'
+import {AwsSecretsAdapter} from './adapter-aws/AwsSecretsAdapter'
+import {AwsSesAdapter} from './adapter-aws/AwsSesAdapter'
+import {AwsAppConfigAdapter} from './adapter-aws/AwsAppConfigAdapter'
+import {AwsKinesisAdapter} from './adapter-aws/AwsKinesisAdapter'
+import {AwsSageMakerAdapter} from './adapter-aws/AwsSageMakerAdapter'
 import {awsClientsForAccount, resolveAccountId} from './aws'
 import {createEc2Service} from './services/ec2'
 import {createEksService} from './services/eks'
 import {createRdsService} from './services/rds'
 
 /**
- * Build a CloudProxyService whose AWS adapters are bound to a specific account.
- * The account id drives the AWS SDK credentials (see aws.ts), so every AWS call
- * the returned service makes is isolated to that account. Azure and GCP adapters
- * use their own runtime auth model and are account-neutral.
+ * Build the adapter registry for an account. The account id drives the AWS SDK
+ * credentials (see aws.ts), so every AWS call is isolated to that account; Azure
+ * and GCP adapters use their own runtime auth model and are account-neutral.
+ *
+ * Exported separately from the service so tests can assert registry contents —
+ * notably that every adapter implements what its schema advertises — without
+ * reaching into private state.
  */
-export function createCloudProxyService(accountId?: string | null): CloudProxyService {
+export function createCloudAdapterRegistry(accountId?: string | null): CloudAdapterRegistry {
     const clients = awsClientsForAccount(accountId)
     const ec2Service = createEc2Service(clients.ec2)
 
-    const registry = new CloudAdapterRegistry([
+    return new CloudAdapterRegistry([
         new AwsStorageAdapter(clients.s3),
+        new AwsDynamoDbAdapter(clients.dynamodb),
         new AwsEksAdapter(createEksService(clients.eks)),
         new AwsDatabaseAdapter(createRdsService(clients.rds), clients.rds),
         new AwsComputeAdapter(ec2Service),
         new AwsNetworkingAdapter(ec2Service),
-        new AwsServerlessAdapter(clients.lambda),
+        new AwsServerlessAdapter(clients.lambda, clients.s3, clients.dynamodb, clients.sqs, clients.kinesis),
+        new AwsLogsAdapter(clients.logs),
+        new AwsParameterStoreAdapter(clients.ssm),
+        new AwsKmsAdapter(clients.kms),
+        new AwsStepFunctionsAdapter(clients.sfn),
+        new AwsLoadBalancingAdapter(clients.elbv2),
+        new AwsEventBridgeAdapter(clients.eventbridge),
+        new AwsIamAdapter(clients.iam),
+        new AwsCognitoAdapter(clients.cognito),
+        new AwsApiGatewayAdapter(clients.apiGateway),
+        new AwsCloudFormationAdapter(clients.cloudformation),
+        new AwsSecretsAdapter(clients.secretsManager),
+        new AwsSesAdapter(),
+        new AwsAppConfigAdapter(clients.appConfig),
+        new AwsKinesisAdapter(clients.kinesis),
+        new AwsSageMakerAdapter(clients.sagemaker),
         new AzureStorageAdapter(),
+        new AzureServiceBusAdapter(),
         new AzureDatabaseAdapter(),
+        new AzureAksAdapter(),
+        new AzureNoSqlAdapter(),
+        new AzureComputeAdapter(),
+        new AzureNetworkingAdapter(),
         new GcpStorageAdapter(),
         new GcpCloudFunctionsAdapter(),
+        new GcpCloudSqlAdapter(),
+        new GcpGkeAdapter(),
+        new GcpCloudRunAdapter(),
+        new GcpPubSubAdapter(),
+        new GcpSecretManagerAdapter(),
+        new GcpSchedulerAdapter(),
+        new AwsSqsAdapter(clients.sqs),
         new AzureServerlessAdapter(),
+        new AzureKeyVaultAdapter(),
     ])
+}
 
-    return new CloudProxyService(registry)
+export function createCloudProxyService(accountId?: string | null): CloudProxyService {
+    return new CloudProxyService(createCloudAdapterRegistry(accountId))
 }
 
 const serviceCache = new Map<string, CloudProxyService>()

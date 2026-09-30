@@ -1,7 +1,7 @@
 import type {CloudProvider, CloudStatus} from '@/types/cloud'
 
-export function runtimeEndpointLabel(cloud: CloudProvider, status?: CloudStatus): string {
-    return status?.endpoint ?? (cloud === 'aws' ? 'http://localhost:4566' : cloud === 'azure' ? 'http://localhost:4577' : 'http://localhost:4588')
+export function runtimeEndpointLabel(status?: CloudStatus): string {
+    return status?.endpoint ?? 'Unknown endpoint'
 }
 
 export function runtimeLabelFor(status: CloudStatus | undefined, loading: boolean): string {
@@ -24,14 +24,7 @@ export function runtimeDetailFor(cloud: CloudProvider, status?: CloudStatus): st
     return 'Waiting for runtime status'
 }
 
-export function activeServicesDetailFor(cloud: CloudProvider): string {
-    if (cloud === 'aws') return 'Storage, k8s Engine, Database, and Secrets Manager are wired'
-    if (cloud === 'gcp') return 'Storage is wired through Floci-GCP'
-    return 'Storage only for this multi-cloud pass'
-}
-
 export function resourceDetailFor(
-    cloud: CloudProvider,
     status: CloudStatus | undefined,
     statusLoading: boolean,
     resourcesLoading: boolean,
@@ -42,9 +35,7 @@ export function resourceDetailFor(
     if (status?.runtime === 'coming_soon') return 'No adapter registered yet'
     if (resourcesLoading) return 'Loading normalized resources'
     if (resourcesError) return 'Resource load failed'
-    if (cloud === 'aws') return 'Storage, k8s Engine, Database, and Secrets Manager resources'
-    if (cloud === 'gcp') return 'Cloud Storage resources'
-    return 'Normalized storage resources'
+    return 'Normalized resources across available services'
 }
 
 export function serviceMetaLabel(status: CloudStatus | undefined, loading: boolean, label: string): string {
@@ -52,18 +43,6 @@ export function serviceMetaLabel(status: CloudStatus | undefined, loading: boole
     if (status?.runtime === 'coming_soon') return 'coming soon'
     if (loading) return `loading ${label}`
     return label
-}
-
-export function cloudName(cloud: CloudProvider): string {
-    if (cloud === 'aws') return 'AWS Local Runtime'
-    if (cloud === 'azure') return 'Azure Local Runtime'
-    return 'GCP Local Runtime'
-}
-
-export function providerDescription(cloud: CloudProvider): string {
-    if (cloud === 'aws') return 'Storage, runtime infrastructure, and AWS-specific pages are backed by Floci AWS Core.'
-    if (cloud === 'azure') return 'Storage is backed by Floci-AZ through the same normalized storage contract.'
-    return 'Storage is backed by Floci-GCP through the same normalized storage contract.'
 }
 
 export function adapterLabel(cloud: CloudProvider, status?: CloudStatus): string {

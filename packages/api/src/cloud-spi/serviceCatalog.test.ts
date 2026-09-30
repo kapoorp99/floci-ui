@@ -1,0 +1,127 @@
+import {describe, expect, test} from 'bun:test'
+import {
+    SERVICE_CATALOG,
+    SERVICE_CATALOG_ENTRIES,
+    SERVICE_GROUP_ORDER,
+    SERVICE_TYPES,
+    catalogEntry,
+    descriptionFor,
+    displayNameFor,
+    isServiceType,
+    routeFor,
+} from './serviceCatalog'
+
+describe('SERVICE_CATALOG', () => {
+    test('every entry carries the metadata the nav needs', () => {
+        for (const entry of SERVICE_CATALOG_ENTRIES) {
+            expect(entry.displayName.length).toBeGreaterThan(0)
+            expect(entry.description.trim().length).toBeGreaterThan(0)
+            expect(entry.description.length).toBeLessThanOrEqual(90)
+            expect(entry.iconKey.length).toBeGreaterThan(0)
+            expect(SERVICE_GROUP_ORDER).toContain(entry.group)
+            expect(Number.isFinite(entry.order)).toBe(true)
+            expect(routeFor(entry, 'aws').length).toBeGreaterThan(0)
+        }
+    })
+
+    test('exposes one entry per catalog key', () => {
+        expect(SERVICE_CATALOG_ENTRIES).toHaveLength(Object.keys(SERVICE_CATALOG).length)
+        expect(new Set(SERVICE_TYPES).size).toBe(SERVICE_TYPES.length)
+    })
+
+    test('registers the iac category under the Provisioning group', () => {
+        expect(SERVICE_GROUP_ORDER).toContain('Provisioning')
+        const iac = catalogEntry('iac')!
+        expect(iac.group).toBe('Provisioning')
+        expect(isServiceType('iac')).toBe(true)
+        expect(displayNameFor(iac, 'aws')).toBe('CloudFormation')
+    })
+
+    test('registers the workflows category under the Integration group', () => {
+        expect(SERVICE_GROUP_ORDER).toContain('Integration')
+        const workflows = catalogEntry('workflows')!
+        expect(workflows.group).toBe('Integration')
+        expect(workflows.iconKey).toBe('workflows')
+        expect(isServiceType('workflows')).toBe(true)
+        expect(displayNameFor(workflows, 'aws')).toBe('Step Functions')
+        // No override for the other clouds -> the shared display name.
+        expect(displayNameFor(workflows, 'gcp')).toBe('Workflows')
+    })
+
+    test('keeps Cognito separate from the IAM identity category', () => {
+        const cognito = catalogEntry('cognito')!
+
+        expect(cognito.group).toBe('Security')
+        expect(cognito.iconKey).toBe('iam')
+        expect(cognito.order).toBeGreaterThan(catalogEntry('identity')!.order)
+        expect(isServiceType('cognito')).toBe(true)
+    })
+
+    test('orders entries by group then in-group order', () => {
+        const positions = SERVICE_CATALOG_ENTRIES.map((entry) => [
+            SERVICE_GROUP_ORDER.indexOf(entry.group),
+            entry.order,
+        ])
+
+        for (let i = 1; i < positions.length; i += 1) {
+            const [prevGroup, prevOrder] = positions[i - 1]!
+            const [group, order] = positions[i]!
+            expect(prevGroup < group || (prevGroup === group && prevOrder <= order)).toBe(true)
+        }
+    })
+
+    test('routes default to the slug', () => {
+        expect(routeFor(catalogEntry('storage')!, 'aws')).toBe('storage')
+        expect(routeFor(catalogEntry('storage')!, 'gcp')).toBe('storage')
+    })
+
+    test('a per-cloud override routes one provider to its bespoke page', () => {
+        // AWS Secrets Manager keeps its dedicated page until value reveal exists
+        // as a row action; GCP goes through the generic explorer today.
+        const secrets = catalogEntry('secrets')!
+        expect(routeFor(secrets, 'aws')).toBe('/secretsmanager')
+        expect(routeFor(secrets, 'gcp')).toBe('secrets')
+    })
+
+    test('resolves per-cloud routes so one category can span a legacy page and the explorer', () => {
+        const secrets = catalogEntry('secrets')!
+        expect(routeFor(secrets, 'aws')).toBe('/secretsmanager')
+        expect(routeFor(secrets, 'azure')).toBe('secrets')
+        // A category with no per-cloud override is unaffected by the cloud argument.
+        expect(routeFor(catalogEntry('storage')!, 'azure')).toBe('storage')
+    })
+
+    test('resolves per-cloud display names', () => {
+        const k8s = catalogEntry('k8s')!
+        expect(displayNameFor(k8s, 'aws')).toBe('EKS')
+        expect(displayNameFor(k8s, 'azure')).toBe('AKS')
+        expect(displayNameFor(k8s, 'gcp')).toBe('GKE')
+        // No override -> the shared display name.
+        expect(displayNameFor(catalogEntry('storage')!, 'gcp')).toBe('Storage')
+    })
+
+    test('resolves per-cloud descriptions without promising the wrong messaging model', () => {
+        const messaging = catalogEntry('messaging')!
+        expect(descriptionFor(messaging, 'aws')).toContain('Queue')
+        expect(descriptionFor(messaging, 'gcp')).toContain('Publish and subscribe')
+        expect(descriptionFor(messaging, 'azure')).toBe(messaging.description)
+    })
+})
+
+describe('isServiceType', () => {
+    test('accepts every catalog key', () => {
+        for (const service of SERVICE_TYPES) {
+            expect(isServiceType(service)).toBe(true)
+        }
+    })
+
+    test('rejects unknown slugs so routes 404 instead of failing later', () => {
+        for (const slug of ['queue', 'stroage', '', 'constructor', '__proto__', 'toString']) {
+            expect(isServiceType(slug)).toBe(false)
+        }
+    })
+
+    test('catalogEntry returns undefined for an unknown slug', () => {
+        expect(catalogEntry('queue')).toBeUndefined()
+    })
+})

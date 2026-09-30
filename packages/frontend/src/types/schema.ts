@@ -1,9 +1,35 @@
 import type {CloudProvider, CloudServiceType} from './cloud'
 
-export type FieldType = 'text' | 'select'
-export type ActionSchema = 'list' | 'create' | 'delete' | 'inspect'
-export type ResourceActionName = 'list' | 'create' | 'delete' | 'inspect'
+export type FieldType = 'text' | 'textarea' | 'password' | 'select'
+export type ActionSchema = 'list' | 'create' | 'update' | 'delete' | 'inspect'
+// Mirrors packages/api/src/cloud-spi/types.ts. Lifecycle verbs can be advertised
+// in a capability block even though they are not table-level controls.
+export type ResourceActionName =
+    | 'list'
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'inspect'
+    | 'encrypt'
+    | 'decrypt'
+    | 'invoke'
+    | 'start'
+    | 'stop'
+    | 'reboot'
+    | 'updateTags'
+    | 'sendMessage'
+    | 'receiveMessages'
+    | 'deleteMessage'
+    | 'purgeQueue'
 export type ObjectActionName = 'list' | 'upload' | 'download' | 'delete' | 'createFolder' | 'copy'
+export type DatabaseActionName = 'listSnapshots' | 'createSnapshot'
+export type KubernetesActionName =
+    | 'listNodegroups'
+    | 'createNodegroup'
+    | 'deleteNodegroup'
+    | 'listFargateProfiles'
+    | 'createFargateProfile'
+    | 'deleteFargateProfile'
 export type CapabilityStatus = 'available' | 'blocked' | 'partial' | 'coming_soon'
 
 export interface CapabilitySchema<TAction extends string> {
@@ -20,21 +46,33 @@ export interface FieldSchema {
     label: string
     type: FieldType
     required: boolean
+    requiredWhen?: {field: string; equals: string}
     description?: string
     group?: string
     span?: boolean
+    valuePath?: string
+    defaultValue?: string
+    visibleWhen?: {field: string; equals: string}
     validation?: {
         pattern?: string
         minLength?: number
         maxLength?: number
+        maxLengthWhen?: {field: string; equals: string; value: number; message?: string}
         message?: string
     }
     options?: Array<{label: string; value: string}>
 }
 
+export type ColumnFormat = 'text' | 'datetime' | 'relative' | 'bytes' | 'boolean' | 'badge' | 'code' | 'list'
+
 export interface TableColumnSchema {
     name: string
     label: string
+    /** Dotted accessor, defaulting to `name`; needed to reach `metadata.*`. */
+    path?: string
+    format?: ColumnFormat
+    emptyText?: string
+    width?: string
 }
 
 export interface ServiceSchema {
@@ -46,7 +84,10 @@ export interface ServiceSchema {
     capabilities?: {
         resourceActions?: Array<CapabilitySchema<ResourceActionName> | ResourceActionName>
         objectActions?: Array<CapabilitySchema<ObjectActionName> | ObjectActionName>
+        databaseActions?: Array<CapabilitySchema<DatabaseActionName> | DatabaseActionName>
+        kubernetesActions?: Array<CapabilitySchema<KubernetesActionName> | KubernetesActionName>
     }
     filters: FieldSchema[]
     columns: TableColumnSchema[]
+    updateFields?: FieldSchema[]
 }

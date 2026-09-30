@@ -4,18 +4,12 @@ import type {CloudAvailability, CloudProvider, CloudStatus} from '@/types/cloud'
 export interface ConsoleServiceCard {
     id: string
     label: string
+    description: string
     status: CloudAvailability
     count?: number
     icon: ElementType
     route?: string
     meta: string
-}
-
-export interface ProviderBannerProps {
-    cloud: CloudProvider
-    runtimeClass: 'ready' | 'pending' | 'unavailable'
-    runtimeReachable: boolean
-    onOpenStorage: () => void
 }
 
 export interface SummarySectionProps {
@@ -34,6 +28,7 @@ export interface ServiceGridProps {
     services: ConsoleServiceCard[]
     runtimeReachable: boolean
     onNavigate: (route: string) => void
+    searchQuery?: string
 }
 
 export interface RuntimeFlowProps {

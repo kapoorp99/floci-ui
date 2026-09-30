@@ -1,0 +1,5 @@
+# Force LF endings for scripts that run inside Linux containers, regardless
+# of the host OS or a contributor's core.autocrlf setting (Git for Windows
+# defaults to core.autocrlf=true, which otherwise checks these out as CRLF
+# and breaks `/bin/sh` parsing, e.g. "set -e" becoming "set -e\r").
+*.sh text eol=lf

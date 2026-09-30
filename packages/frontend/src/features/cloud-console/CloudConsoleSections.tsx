@@ -1,25 +1,7 @@
 import {type ElementType} from 'react'
-import {Cloud, Database, ExternalLink, Radio, Route, ShieldCheck} from 'lucide-react'
-import {adapterLabel, cloudName, providerDescription, runtimeName} from './cloudConsoleHome.utils'
-import type {ProviderBannerProps, RuntimeFlowProps, ServiceGridProps, SummarySectionProps} from './types'
-
-export function ProviderBanner({cloud, runtimeClass, runtimeReachable, onOpenStorage}: ProviderBannerProps) {
-    return (
-        <section className={`console-provider-banner ${runtimeClass}`}>
-            <div>
-                <p className="eyebrow">Selected Cloud</p>
-                <h3>{cloudName(cloud)}</h3>
-                <p>{providerDescription(cloud)}</p>
-            </div>
-            <div className="console-provider-actions">
-                <button className="button primary" type="button" disabled={!runtimeReachable} onClick={onOpenStorage}>
-                    <ExternalLink size={14}/>
-                    Open Storage
-                </button>
-            </div>
-        </section>
-    )
-}
+import {Cloud, Database, Radio, Route, ShieldCheck} from 'lucide-react'
+import {adapterLabel, runtimeName} from './cloudConsoleHome.utils'
+import type {RuntimeFlowProps, ServiceGridProps, SummarySectionProps} from './types'
 
 export function SummarySection({
     cloud,
@@ -53,7 +35,17 @@ export function RuntimeFlow({cloud, status}: RuntimeFlowProps) {
     )
 }
 
-export function ServiceGrid({services, runtimeReachable, onNavigate}: ServiceGridProps) {
+export function ServiceGrid({services, runtimeReachable, onNavigate, searchQuery}: ServiceGridProps) {
+    if (services.length === 0) {
+        return (
+            <section className="console-service-grid empty">
+                <p className="muted" style={{ padding: '24px', textAlign: 'center', gridColumn: '1 / -1' }}>
+                    {searchQuery ? `No services matching "${searchQuery}"` : 'No services found.'}
+                </p>
+            </section>
+        )
+    }
+
     return (
         <section className="console-service-grid">
             {services.map((service) => {
@@ -71,6 +63,7 @@ export function ServiceGrid({services, runtimeReachable, onNavigate}: ServiceGri
                                 </span>
                             </div>
                         </div>
+                        <p className="console-service-description">{service.description}</p>
                         <div className="console-service-meta">
                             <strong>{service.count ?? '-'}</strong>
                             <span>{service.meta}</span>

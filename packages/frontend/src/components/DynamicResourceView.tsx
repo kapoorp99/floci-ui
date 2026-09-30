@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, Info, Plus, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createCloudResource,
+  clearEmailInbox,
   deleteCloudResource,
+  getCloudResource,
   getServiceSchema,
   listCloudResources,
+  updateCloudResource,
 } from "@/api/cloudProxyClient";
 import { DynamicFormRenderer } from "@/components/DynamicFormRenderer";
 import { ResourceInspector } from "@/components/ResourceInspector";
@@ -14,6 +17,7 @@ import { ResourceTable } from "@/components/ResourceTable";
 import { StorageObjectBrowser } from "@/components/StorageObjectBrowser";
 import { ComputePanel, LaunchInstanceForm } from "@/components/ComputePanel";
 import { NetworkingPanel } from "@/components/NetworkingPanel";
+import { getPath } from "@/lib/resourcePath";
 import {
   capabilityEnabled,
   capabilityFor,
@@ -29,13 +33,24 @@ import type {
 } from "@/types/cloud";
 import type { CloudResource, StorageObject } from "@/types/resource";
 import type { ServiceSchema } from "@/types/schema";
-import { CosmosNoSqlPanel } from "@/components/CosmosNoSqlPanel";
 import { ServerlessInvokePanel } from "@/components/ServerlessInvokePanel";
+import { dataExplorerPath } from "@/lib/dataExplorer";
+import { useAccountId } from "@/lib/accountStore";
+import { WorkflowExecutionsPanel } from "@/components/WorkflowExecutionsPanel";
+import { DatabaseSnapshotsPanel } from "@/components/DatabaseSnapshotsPanel";
+import { CreateRdsInstanceForm } from "@/components/CreateRdsInstanceForm";
+import { AppConfigPanel } from "@/components/AppConfigPanel";
+import { KmsCryptoPanel } from "@/components/KmsCryptoPanel";
+import { SqsMessagingPanel } from "@/components/SqsMessagingPanel";
+import { LogsQueryPanel } from "@/components/LogsQueryPanel";
+import { SageMakerDashboardPanel } from "@/components/SageMakerDashboardPanel";
 
 interface DynamicResourceViewProps {
   cloud: CloudProvider;
   service: CloudServiceType;
   serviceAvailability?: CloudAvailability;
+  /** Server-supplied explanation, shown instead of generic coming-soon copy. */
+  serviceReason?: string;
   cloudStatus?: CloudStatus;
   statusLoading?: boolean;
   onOpenInfo: () => void;
@@ -45,20 +60,51 @@ export function DynamicResourceView({
   cloud,
   service,
   serviceAvailability = "coming_soon",
+  serviceReason,
   cloudStatus,
   statusLoading = false,
   onOpenInfo,
 }: DynamicResourceViewProps) {
   const qc = useQueryClient();
+  const accountId = useAccountId();
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<CloudResource | undefined>();
+  const [databaseTab, setDatabaseTab] = useState<"instances" | "snapshots">("instances");
+  const [logsTab, setLogsTab] = useState<"groups" | "insights">("groups");
+  const [selection, setSelection] = useState<
+    { accountId: string; resource: CloudResource } | undefined
+  >();
+  const selected = selection?.accountId === accountId ? selection.resource : undefined;
+  const selectResource = (resource: CloudResource | undefined) => {
+    setSelection(resource ? { accountId, resource } : undefined);
+  };
   const [selectedObject, setSelectedObject] = useState<
     StorageObject | undefined
   >();
   const [createOpen, setCreateOpen] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [isDeleteMulti, setIsDeleteMulti] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<CloudResource[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+
+
+  const handleDatabaseTabChange = (tab: "instances" | "snapshots") => {
+    setDatabaseTab(tab);
+    if (tab === "snapshots") {
+      setSearch("");
+    }
+  };
+
+  const handleLogsTabChange = (tab: "groups" | "insights") => {
+    setLogsTab(tab);
+    if (tab === "insights") {
+      setSearch("");
+    }
+  };
+
   const resourcesKey = useMemo(
-    () => ["cloud-resources", cloud, service, search],
-    [cloud, service, search],
+    () => ["cloud-resources", accountId, cloud, service, search],
+    [accountId, cloud, service, search],
   );
 
   const schemaQuery = useQuery({
@@ -74,15 +120,80 @@ export function DynamicResourceView({
       serviceAvailability === "available" &&
       cloudStatus?.runtime === "reachable",
   });
+  const selectedForService =
+    selected?.cloud === cloud && selected.service === service
+      ? selected
+      : undefined;
+  const resourceDetailQuery = useQuery({
+    queryKey: ["cloud-resource", accountId, cloud, service, selectedForService?.id],
+    queryFn: ({ signal }) =>
+      getCloudResource(cloud, service, selectedForService!.id, signal),
+    enabled:
+      selectedForService !== undefined &&
+      schemaQuery.data?.actions.includes("inspect") === true &&
+      serviceAvailability === "available" &&
+      cloudStatus?.runtime === "reachable",
+  });
+  const isAwsSageMaker = cloud === "aws" && service === "sagemaker";
+  const canDeleteResource = isAwsSageMaker
+    ? (resource: CloudResource) => resource.type !== "sagemaker-training-job"
+    : undefined;
+  const sagemakerDashboardResourcesQuery = useQuery({
+    queryKey: ["sagemaker-dashboard-resources", accountId, cloud, service],
+    queryFn: ({ signal }) => listCloudResources(cloud, service, "", signal),
+    enabled:
+      isAwsSageMaker &&
+      schemaQuery.isSuccess &&
+      serviceAvailability === "available" &&
+      cloudStatus?.runtime === "reachable",
+  });
+
+  // Automatically reconcile selected items when resources query data changes
+  useEffect(() => {
+    setSelectedItems((prev) => {
+      if (prev.length === 0) return prev;
+      const currentIds = new Set((resourcesQuery.data || []).map((r) => r.id));
+      const next = prev.filter((item) => currentIds.has(item.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [resourcesQuery.data]);
+
+  const selectMultiple = (select?: CloudResource | boolean) => {
+    const currentResources = (resourcesQuery.data || []).filter(
+      (r) => canDeleteResource?.(r) ?? true,
+    );
+    if (typeof select === "boolean" || select === undefined) {
+      const isAllCurrentlySelected =
+        currentResources.length > 0 &&
+        currentResources.every((r) =>
+          selectedItems.some((item) => item.id === r.id),
+        );
+      const shouldSelectAll =
+        typeof select === "boolean" ? select : !isAllCurrentlySelected;
+
+      if (shouldSelectAll) {
+        setSelectedItems(currentResources);
+      } else {
+        setSelectedItems([]);
+      }
+    } else {
+      setSelectedItems((prev) => {
+        const exists = prev.some((item) => item.id === select.id);
+        return exists
+          ? prev.filter((item) => item.id !== select.id)
+          : [...prev, select];
+      });
+    }
+  };
 
   const createMut = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       createCloudResource(cloud, service, values),
     onSuccess: (resource) => {
-      setSelected(resource);
+      selectResource(resource);
       setCreateOpen(false);
       void qc.invalidateQueries({
-        queryKey: ["cloud-resources", cloud, service],
+        queryKey: ["cloud-resources", accountId, cloud, service],
       });
     },
   });
@@ -91,19 +202,175 @@ export function DynamicResourceView({
     mutationFn: (resource: CloudResource) =>
       deleteCloudResource(cloud, service, resource.id),
     onSuccess: (_, resource) => {
-      if (selected?.id === resource.id) setSelected(undefined);
+      if (selected?.id === resource.id) selectResource(undefined);
+      setSelectedItems((prev) => prev.filter((item) => item.id !== resource.id));
       void qc.invalidateQueries({
-        queryKey: ["cloud-resources", cloud, service],
+        queryKey: ["cloud-resources", accountId, cloud, service],
       });
     },
   });
 
+  const deleteMultipleMut = useMutation({
+    mutationFn: async (items: CloudResource[]) => {
+      const results = await Promise.allSettled(
+        items.map(async (item) => {
+          await deleteCloudResource(cloud, service, item.id);
+          return item.id;
+        }),
+      );
+      const succeededIds = new Set<string>();
+      const failedItems: { id: string; error: unknown }[] = [];
+
+      results.forEach((res, index) => {
+        if (res.status === "fulfilled") {
+          succeededIds.add(res.value);
+        } else {
+          failedItems.push({ id: items[index].id, error: res.reason });
+        }
+      });
+
+      return { succeededIds, failedItems };
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({
+        queryKey: ["cloud-resources", accountId, cloud, service],
+      });
+    },
+    onSuccess: ({ succeededIds, failedItems }) => {
+      setDeleteConfirm(false);
+      setSelectedItems((prev) =>
+        prev.filter((item) => !succeededIds.has(item.id)),
+      );
+      if (selected && succeededIds.has(selected.id)) {
+        selectResource(undefined);
+      }
+
+      if (failedItems.length > 0) {
+        setBulkDeleteError(
+          `Failed to delete ${failedItems.length} of ${
+            succeededIds.size + failedItems.length
+          } selected resource(s).`,
+        );
+      } else {
+        setBulkDeleteError(null);
+        setIsDeleteMulti(false);
+        setSuccessToast(
+          `Successfully deleted ${succeededIds.size} resource(s).`,
+        );
+      }
+    },
+  });
+
+  const clearInboxMut = useMutation({
+    mutationFn: () => clearEmailInbox(cloud),
+    onSuccess: () => {
+      selectResource(undefined);
+      setClearConfirm(false);
+      void qc.invalidateQueries({
+        queryKey: ["cloud-resources", accountId, cloud, service],
+      });
+    },
+  });
+
+  const [editingResource, setEditingResource] = useState<CloudResource | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
   useEffect(() => {
-    setSelected(undefined);
+    if (successToast) {
+      const timer = setTimeout(() => setSuccessToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successToast]);
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, values }: { id: string; values: Record<string, unknown> }) =>
+      updateCloudResource(cloud, service, id, values),
+    onSuccess: (updatedResource) => {
+      setEditingResource(null);
+      setUpdateError(null);
+      selectResource(updatedResource);
+      setSuccessToast(`Successfully updated ${updatedResource.name || updatedResource.id}`);
+      void qc.invalidateQueries({
+        queryKey: ["cloud-resources", accountId, cloud, service],
+      });
+      void qc.resetQueries({
+        queryKey: ["cloud-resource", accountId, cloud, service, updatedResource.id],
+        exact: true,
+      });
+    },
+    onError: (err) => {
+      setUpdateError(err instanceof Error ? err.message : "Failed to update resource");
+    },
+  });
+
+  const initialEditValues = useMemo(() => {
+    if (!editingResource || !schemaQuery.data?.updateFields) return {};
+    const vals: Record<string, unknown> = {};
+    for (const field of schemaQuery.data.updateFields) {
+      const path = field.valuePath ?? field.name;
+      const currentVal = getPath(editingResource, path);
+      if (currentVal !== undefined && currentVal !== null) {
+        vals[field.name] = currentVal;
+      }
+    }
+    return vals;
+  }, [editingResource, schemaQuery.data?.updateFields]);
+
+  function handleEditSubmit(values: Record<string, unknown>) {
+    if (!editingResource || !schemaQuery.data?.updateFields) return;
+    setUpdateError(null);
+
+    const diff: Record<string, unknown> = {};
+    for (const field of schemaQuery.data.updateFields) {
+      const rawVal = values[field.name];
+      const initialVal = initialEditValues[field.name];
+
+      if (rawVal === undefined) continue;
+
+      if (typeof rawVal === "string") {
+        const trimmed = rawVal.trim();
+        if (!trimmed && !field.required) {
+          continue;
+        }
+        const initialStr =
+          initialVal !== undefined && initialVal !== null ? String(initialVal).trim() : "";
+        if (trimmed !== initialStr) {
+          diff[field.name] = trimmed;
+        }
+      } else if (rawVal !== initialVal) {
+        diff[field.name] = rawVal;
+      }
+    }
+
+    if (Object.keys(diff).length === 0) {
+      setUpdateError("No fields changed.");
+      return;
+    }
+
+    updateMut.mutate({ id: editingResource.id, values: diff });
+  }
+
+  useEffect(() => {
+    setSelection(undefined);
     setSelectedObject(undefined);
     setCreateOpen(false);
+    setClearConfirm(false);
+    setDeleteConfirm(false);
+    setBulkDeleteError(null);
+    setEditingResource(null);
+    setUpdateError(null);
     setSearch("");
-  }, [cloud, service]);
+    setDatabaseTab("instances");
+    setIsDeleteMulti(false);
+    setSelectedItems([]);
+  }, [accountId, cloud, service]);
+
+  useEffect(() => {
+    if (selectedItems.length === 0 && deleteConfirm) {
+      setDeleteConfirm(false);
+    }
+  }, [selectedItems.length, deleteConfirm]);
 
   useEffect(() => {
     setSelectedObject(undefined);
@@ -159,10 +426,18 @@ export function DynamicResourceView({
   const schema = schemaQuery.data;
   const resources = resourcesQuery.data ?? [];
   const canCreate = schema.actions.includes("create");
-  const activeSelected =
-    selected?.cloud === cloud && selected.service === service
-      ? selected
-      : undefined;
+  const canDelete = schema.actions.includes("delete");
+  const selectableResources = resources.filter(
+    (r) => canDeleteResource?.(r) ?? true,
+  );
+  const isAllSelected =
+    selectableResources.length > 0 &&
+    selectableResources.every((r) => selectedItems.some((s) => s.id === r.id));
+  const activeSelected = selectedForService;
+  const inspectedResource =
+    !resourceDetailQuery.isFetching && resourceDetailQuery.data?.id === activeSelected?.id
+      ? resourceDetailQuery.data
+      : activeSelected;
   const runtimeReachable = cloudStatus?.runtime === "reachable";
   const resourceCapabilityInputs =
     schema.capabilities?.resourceActions ?? schema.actions;
@@ -181,107 +456,349 @@ export function DynamicResourceView({
     serviceAvailability,
   );
   const createCapability = capabilityFor(resourceCapabilities, "create");
-  const createResourceLabel = resourceCreateLabel(schema);
+  const createResourceLabel = createCapability?.label ?? "Create resource";
+  const databaseCapabilities = withServiceAvailability(
+    withRuntimeState(
+      normalizeCapabilities(schema.capabilities?.databaseActions),
+      runtimeReachable,
+    ),
+    serviceAvailability,
+  );
+  const listSnapshotCapability = capabilityFor(
+    databaseCapabilities,
+    "listSnapshots",
+  );
+  const createSnapshotCapability = capabilityFor(
+    databaseCapabilities,
+    "createSnapshot",
+  );
   const canUseRuntime = runtimeReachable && adapterAvailable;
   const canCreateResource =
     canUseRuntime && capabilityEnabled(createCapability);
+  const isAwsDatabase = cloud === "aws" && service === "database";
+  const showDatabaseSnapshots = isAwsDatabase && databaseTab === "snapshots";
+  const isAwsLogs = cloud === "aws" && service === "logs";
+  const showLogsInsights = isAwsLogs && logsTab === "insights";
 
   return (
     <div className="dynamic-resource-view">
       <TopbarServiceInfo onOpenInfo={onOpenInfo} />
 
       <div
-        className={`resource-workbench${activeSelected ? " with-inspector" : ""}`}
+        className={`resource-workbench${activeSelected && !showDatabaseSnapshots && !showLogsInsights ? " with-inspector" : ""}`}
       >
         <section className="resource-main">
-          <section className="table-panel">
-            <div className="input-row resource-table-bar">
-              <div>
-                <p className="eyebrow">Resources</p>
-                <span className="muted">
-                  {resources.length} normalized resources
-                </span>
-              </div>
-              <div className="resource-table-tools">
-                <input
-                  className="input"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Filter resources"
-                />
-                <button
-                  className="button"
-                  type="button"
-                  disabled={!canCreateResource}
-                  title={createCapability?.reason}
-                  onClick={() => setCreateOpen((open) => !open)}
-                >
-                  <Plus size={14} />
-                  {createResourceLabel}
-                  {createOpen ? (
-                    <ChevronUp size={13} />
-                  ) : (
-                    <ChevronDown size={13} />
-                  )}
-                </button>
-                <button
-                  className="button"
-                  type="button"
-                  disabled={!canUseRuntime || resourcesQuery.isFetching}
-                  onClick={() => resourcesQuery.refetch()}
-                >
-                  <RefreshCw size={14} />
-                  {resourcesQuery.isFetching ? "Loading" : "Refresh"}
-                </button>
-              </div>
+          {isAwsDatabase && (
+            <div className="drawer-tabs" style={{ marginBottom: 12 }}>
+              <button
+                type="button"
+                className={`drawer-tab ${databaseTab === "instances" ? "active" : ""}`}
+                onClick={() => handleDatabaseTabChange("instances")}
+              >
+                Instances
+              </button>
+              <button
+                type="button"
+                className={`drawer-tab ${databaseTab === "snapshots" ? "active" : ""}`}
+                onClick={() => handleDatabaseTabChange("snapshots")}
+              >
+                Snapshots
+              </button>
             </div>
-            {canCreate && createOpen && (
-              <div className="resource-create-inline">
-                {service === "compute" ? (
-                  <LaunchInstanceForm
-                    cloud={cloud}
-                    selectedResource={activeSelected}
-                    onSuccess={(resource) => {
-                      setSelected(resource);
-                      setCreateOpen(false);
-                    }}
-                    onCancel={() => setCreateOpen(false)}
-                  />
-                ) : (
-                  <DynamicFormRenderer
-                    schema={schema}
-                    isSubmitting={createMut.isPending}
-                    submitLabel={createResourceLabel}
-                    pendingLabel="Creating"
-                    submitError={
-                      createMut.error instanceof Error
-                        ? createMut.error.message
-                        : null
-                    }
-                    onSubmit={(values) => createMut.mutate(values)}
-                  />
-                )}
-              </div>
+          )}
+
+          {isAwsLogs && (
+            <div className="drawer-tabs" style={{ marginBottom: 12 }}>
+              <button
+                type="button"
+                className={`drawer-tab ${logsTab === "groups" ? "active" : ""}`}
+                onClick={() => handleLogsTabChange("groups")}
+              >
+                Log groups
+              </button>
+              <button
+                type="button"
+                className={`drawer-tab ${logsTab === "insights" ? "active" : ""}`}
+                onClick={() => handleLogsTabChange("insights")}
+              >
+                Logs Insights
+              </button>
+            </div>
+          )}
+
+          {showDatabaseSnapshots ? (
+            <DatabaseSnapshotsPanel
+              cloud={cloud}
+              instances={resources}
+              listCapability={listSnapshotCapability}
+              createCapability={createSnapshotCapability}
+              runtimeReachable={canUseRuntime}
+            />
+          ) : (
+            <>
+            {isAwsSageMaker && (
+              <SageMakerDashboardPanel
+                resources={sagemakerDashboardResourcesQuery.data ?? []}
+                isRefreshing={sagemakerDashboardResourcesQuery.isFetching || resourcesQuery.isFetching}
+                updatedAt={sagemakerDashboardResourcesQuery.dataUpdatedAt}
+                onRefresh={() => {
+                  void sagemakerDashboardResourcesQuery.refetch()
+                  void resourcesQuery.refetch()
+                }}
+              />
             )}
-            {renderResourceSurface({
-              schema,
-              resources,
-              selectedId: activeSelected?.id,
-              deletingId: deleteMut.variables?.id,
-              cloudStatus,
-              statusLoading,
-              serviceAvailability,
-              resourcesLoading: resourcesQuery.isLoading,
-              resourcesError: resourcesQuery.error,
-              onSelect: setSelected,
-              onDelete: (resource) => deleteMut.mutate(resource),
-            })}
-          </section>
+            <section className="table-panel" hidden={showLogsInsights}>
+              <div className="input-row resource-table-bar">
+                <div>
+                  <p className="eyebrow">Resources</p>
+                  <span className="muted">
+                    {resources.length} normalized resources
+                  </span>
+                </div>
+                <div className="resource-table-tools">
+                  <div className="search-box">
+                    <input
+                      className="input"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Filter resources"
+                    />
+                  </div>
+                  {service === "email" && (
+                    clearConfirm ? (
+                      <>
+                        <button
+                          className="button danger"
+                          type="button"
+                          disabled={!canUseRuntime || clearInboxMut.isPending}
+                          onClick={() => clearInboxMut.mutate()}
+                        >
+                          <Trash2 size={14} />
+                          {clearInboxMut.isPending ? "Clearing" : "Confirm clear"}
+                        </button>
+                        <button className="button" type="button" disabled={clearInboxMut.isPending} onClick={() => setClearConfirm(false)}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="button danger"
+                        type="button"
+                        disabled={!canUseRuntime}
+                        onClick={() => setClearConfirm(true)}
+                      >
+                        <Trash2 size={14} />
+                        Clear inbox
+                      </button>
+                    )
+                  )}
+                  {canCreate && (
+                    <button
+                      className="button"
+                      type="button"
+                      disabled={!canCreateResource}
+                      title={createCapability?.reason}
+                      onClick={() => setCreateOpen((open) => !open)}
+                    >
+                      <Plus size={14} />
+                      {createResourceLabel}
+                      {createOpen ? (
+                        <ChevronUp size={13} />
+                      ) : (
+                        <ChevronDown size={13} />
+                      )}
+                    </button>
+                  )}
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={
+                      !canUseRuntime || resourcesQuery.isFetching || resourceDetailQuery.isFetching
+                    }
+                    onClick={() => {
+                      void resourcesQuery.refetch();
+                      if (
+                        selectedForService !== undefined &&
+                        schema.actions.includes("inspect")
+                      ) {
+                        void qc.resetQueries({
+                          queryKey: [
+                            "cloud-resource",
+                            accountId,
+                            cloud,
+                            service,
+                            selectedForService.id,
+                          ],
+                          exact: true,
+                        });
+                      }
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                    {resourcesQuery.isFetching || resourceDetailQuery.isFetching
+                      ? "Loading"
+                      : "Refresh"}
+                  </button>
+                  {canDelete && (
+                    deleteConfirm ? (
+                      <>
+                        <button
+                          className="button danger"
+                          type="button"
+                          disabled={!canUseRuntime || deleteMultipleMut.isPending}
+                          onClick={() => deleteMultipleMut.mutate(selectedItems)}
+                        >
+                          <Trash2 size={14} />
+                          {deleteMultipleMut.isPending
+                            ? "Deleting..."
+                            : `Confirm Delete (${selectedItems.length})`}
+                        </button>
+                        <button
+                          className="button"
+                          type="button"
+                          disabled={deleteMultipleMut.isPending}
+                          onClick={() => setDeleteConfirm(false)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="button danger"
+                        type="button"
+                        disabled={
+                          !canUseRuntime ||
+                          resourcesQuery.isFetching ||
+                          deleteMultipleMut.isPending
+                        }
+                        onClick={() => {
+                          if (!isDeleteMulti) {
+                            setIsDeleteMulti(true);
+                          } else if (selectedItems.length > 0) {
+                            setDeleteConfirm(true);
+                          } else {
+                            setIsDeleteMulti(false);
+                            setSelectedItems([]);
+                          }
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        {isDeleteMulti && selectedItems.length > 0
+                          ? `Delete Selected (${selectedItems.length})`
+                          : isDeleteMulti
+                          ? "Cancel Selection"
+                          : "Delete Multiple"}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+              {service === "email" && clearInboxMut.isError && (
+                <p className="error-text compact-text" style={{ margin: "0 12px 10px" }}>
+                  {clearInboxMut.error instanceof Error
+                    ? clearInboxMut.error.message
+                    : "Unable to clear the inbox."}
+                </p>
+              )}
+              {bulkDeleteError && (
+                <p className="error-text compact-text" style={{ margin: "0 12px 10px" }}>
+                  {bulkDeleteError}
+                </p>
+              )}
+              {canCreate && createOpen && (
+                <div className="resource-create-inline">
+                  {/*
+                 * AWS only. LaunchInstanceForm is an EC2 form: it asks for an AMI id,
+                 * populates its dropdowns from the legacy /api/ec2 routes, and submits
+                 * imageId/instanceType. On any other cloud that is the wrong form
+                 * entirely — the Azure adapter rejects it with "resourceGroup is
+                 * required". Every other cloud falls through to DynamicFormRenderer,
+                 * which builds the right form from the adapter's own schema.
+                 */}
+                  {service === "compute" && cloud === "aws" ? (
+                    <LaunchInstanceForm
+                      cloud={cloud}
+                      selectedResource={activeSelected}
+                      onSuccess={(resource) => {
+                        selectResource(resource);
+                        setCreateOpen(false);
+                      }}
+                      onCancel={() => setCreateOpen(false)}
+                    />
+                  ) : service === "database" && cloud === "aws" ? (
+                    <CreateRdsInstanceForm
+                      cloud={cloud}
+                      onSuccess={(resource) => {
+                        selectResource(resource);
+                        setCreateOpen(false);
+                      }}
+                      onCancel={() => setCreateOpen(false)}
+                    />
+                  ) : (
+                    <DynamicFormRenderer
+                      key={`${cloud}:${service}:create`}
+                      schema={schema}
+                      isSubmitting={createMut.isPending}
+                      submitLabel={createResourceLabel}
+                      pendingLabel="Creating"
+                      submitError={
+                        createMut.error instanceof Error
+                          ? createMut.error.message
+                          : null
+                      }
+                      onCancel={() => setCreateOpen(false)}
+                      onSubmit={(values) => createMut.mutate(values)}
+                    />
+                  )}
+                </div>
+              )}
+              {renderResourceSurface({
+                schema,
+                resources,
+                selectedId: activeSelected?.id,
+                deletingId: deleteMut.variables?.id,
+                cloudStatus,
+                statusLoading,
+                serviceAvailability,
+                serviceReason,
+                resourcesLoading: resourcesQuery.isLoading,
+                resourcesError: resourcesQuery.error,
+                isRetrying: resourcesQuery.isFetching,
+                onSelect: selectResource,
+                onEdit:
+                  schema.updateFields &&
+                    schema.updateFields.length > 0 &&
+                    schema.actions.includes("update")
+                    ? (resource) => {
+                      setEditingResource(resource);
+                      setUpdateError(null);
+                    }
+                    : undefined,
+                onDelete: (resource) => deleteMut.mutate(resource),
+                canDeleteResource,
+                onRetry: () => resourcesQuery.refetch(),
+                isDeleteMulti,
+                selectedItems,
+                onToggleSelect: (resource) => selectMultiple(resource),
+                onToggleSelectAll: () => selectMultiple(!isAllSelected),
+                isAllSelected,
+              })}
+            </section>
+            </>
+          )}
+          {isAwsLogs && (
+            <div hidden={!showLogsInsights}>
+              <LogsQueryPanel cloud={cloud} allLogGroups={resources} runtimeReachable={canUseRuntime} />
+            </div>
+          )}
         </section>
-        {activeSelected && (
+        {activeSelected && !showDatabaseSnapshots && !showLogsInsights && (
           <ResourceInspector
-            resource={activeSelected}
+            resource={inspectedResource}
             object={selectedObject}
+            cloud={cloud}
+            runtimeReachable={canUseRuntime}
+            serviceName={schema.displayName}
           />
         )}
       </div>
@@ -309,20 +826,108 @@ export function DynamicResourceView({
           runtimeReachable={runtimeReachable}
         />
       )}
-      {service === "database" && cloud === "azure" && (
-        <CosmosNoSqlPanel
+      {service === "serverless" && (
+        <ServerlessInvokePanel
           cloud={cloud}
           resource={activeSelected}
           runtimeReachable={canUseRuntime}
         />
       )}
-      {service === "serverless" && (
-  <ServerlessInvokePanel
-    cloud={cloud}
-    resource={activeSelected}
-    runtimeReachable={canUseRuntime}
-  />
-)}
+      {service === "configuration" && cloud === "aws" && (
+        <AppConfigPanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {service === "kms" && (
+        <KmsCryptoPanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {service === "messaging" && cloud === "aws" && (
+        <SqsMessagingPanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {service === "workflows" && cloud === "aws" && (
+        <WorkflowExecutionsPanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {editingResource && schema.updateFields && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (!updateMut.isPending) setEditingResource(null);
+          }}
+        >
+          <div
+            className="create-table-modal"
+            style={{ width: 520, maxWidth: "90vw" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="modal-header"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>
+                Edit {schema.displayName}: {editingResource.name || editingResource.id}
+              </h3>
+              <button
+                className="icon-btn"
+                type="button"
+                disabled={updateMut.isPending}
+                onClick={() => setEditingResource(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <DynamicFormRenderer
+              key={editingResource.id}
+              schema={schema}
+              fields={schema.updateFields}
+              initialValues={initialEditValues}
+              isSubmitting={updateMut.isPending}
+              submitLabel="Save Changes"
+              pendingLabel="Saving"
+              submitError={updateError}
+              onCancel={() => setEditingResource(null)}
+              onSubmit={handleEditSubmit}
+            />
+          </div>
+        </div>
+      )}
+      {successToast && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            background: "var(--accent, #3b82f6)",
+            color: "#fff",
+            padding: "10px 18px",
+            borderRadius: 6,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+            zIndex: 1000,
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          {successToast}
+        </div>
+      )}
     </div>
   );
 }
@@ -344,16 +949,6 @@ function TopbarServiceInfo({ onOpenInfo }: { onOpenInfo: () => void }) {
     </button>,
     slot,
   );
-}
-
-function resourceCreateLabel(schema: ServiceSchema): string {
-  if (schema.cloud === "aws" && schema.service === "storage")
-    return "Create bucket";
-  if (schema.cloud === "azure" && schema.service === "storage")
-    return "Create container";
-  if (schema.cloud === "azure" && schema.service === "database")
-    return "Create database";
-  return "Create resource";
 }
 
 function StatusTile({
@@ -381,10 +976,20 @@ function renderResourceSurface({
   cloudStatus,
   statusLoading,
   serviceAvailability,
+  serviceReason,
   resourcesLoading,
   resourcesError,
+  isRetrying,
   onSelect,
+  onEdit,
   onDelete,
+  canDeleteResource,
+  onRetry,
+  isDeleteMulti,
+  selectedItems,
+  onToggleSelect,
+  onToggleSelectAll,
+  isAllSelected,
 }: {
   schema: ServiceSchema;
   resources: CloudResource[];
@@ -393,16 +998,26 @@ function renderResourceSurface({
   cloudStatus?: CloudStatus;
   statusLoading: boolean;
   serviceAvailability: CloudAvailability;
+  serviceReason?: string;
   resourcesLoading: boolean;
   resourcesError: unknown;
+  isRetrying: boolean;
   onSelect: (resource: CloudResource) => void;
+  onEdit?: (resource: CloudResource) => void;
   onDelete: (resource: CloudResource) => void;
+  canDeleteResource?: (resource: CloudResource) => boolean;
+  onRetry?: () => void;
+  isDeleteMulti?: boolean;
+  selectedItems?: CloudResource[];
+  onToggleSelect?: (resource: CloudResource) => void;
+  onToggleSelectAll?: () => void;
+  isAllSelected?: boolean;
 }) {
   if (statusLoading) {
     return (
       <RuntimeNotice
-        title="Checking runtime"
-        detail="Waiting for the proxy to confirm the selected cloud runtime."
+        title="Loading service"
+        detail="Waiting for the proxy to describe this service and confirm its runtime."
         state="pending"
       />
     );
@@ -411,7 +1026,10 @@ function renderResourceSurface({
     return (
       <RuntimeNotice
         title="Adapter coming soon"
-        detail={`${schema.displayName} uses the same normalized schema, but a runtime adapter is not registered yet.`}
+        detail={
+          serviceReason ??
+          `${schema.displayName} uses the same normalized schema, but a runtime adapter is not registered yet.`
+        }
         state="pending"
       />
     );
@@ -429,23 +1047,26 @@ function renderResourceSurface({
   if (resourcesError) {
     return (
       <RuntimeNotice
-        title="Resource load failed"
-        detail="The adapter is registered, but the proxy could not load resources from the selected runtime."
+        title={`Unable to load ${schema.displayName}.`}
+        detail={`The proxy could not fetch ${schema.displayName} resources from the runtime.`}
         error={
           resourcesError instanceof Error
             ? resourcesError.message
             : "Unknown resource error"
         }
         state="unavailable"
+        isRetrying={isRetrying}
+        onRetry={onRetry}
       />
     );
   }
   if (resourcesLoading) {
     return (
       <RuntimeNotice
-        title="Loading resources"
-        detail="Reading normalized resources from the selected cloud adapter."
+        title={`Loading ${schema.displayName}...`}
+        detail={`Reading ${schema.displayName} resources from the runtime.`}
         state="pending"
+        showSpinner={true}
       />
     );
   }
@@ -457,7 +1078,15 @@ function renderResourceSurface({
       selectedId={selectedId}
       deletingId={deletingId}
       onSelect={onSelect}
+      onEdit={onEdit}
       onDelete={onDelete}
+      canDeleteResource={canDeleteResource}
+      dataPath={dataExplorerPath}
+      isDeleteMulti={isDeleteMulti}
+      selectedItems={selectedItems}
+      onToggleSelect={onToggleSelect}
+      onToggleSelectAll={onToggleSelectAll}
+      isAllSelected={isAllSelected}
     />
   );
 }
@@ -467,17 +1096,41 @@ function RuntimeNotice({
   detail,
   error,
   state,
+  showSpinner,
+  isRetrying,
+  onRetry,
 }: {
   title: string;
   detail: string;
   error?: string;
   state: "pending" | "unavailable";
+  showSpinner?: boolean;
+  isRetrying?: boolean;
+  onRetry?: () => void;
 }) {
   return (
     <div className={`runtime-notice ${state}`}>
+      {(showSpinner || isRetrying) && (
+        <Loader2
+          size={24}
+          className="spin"
+          style={{ marginBottom: 8, color: "var(--accent)" }}
+        />
+      )}
       <h3>{title}</h3>
       <p>{detail}</p>
       {error && <code>{error}</code>}
+      {onRetry && (
+        <button
+          className="button"
+          type="button"
+          style={{ marginTop: 12 }}
+          disabled={isRetrying}
+          onClick={() => { if (!isRetrying) onRetry(); }}
+        >
+          {isRetrying ? "Retrying\u2026" : "Retry"}
+        </button>
+      )}
     </div>
   );
 }

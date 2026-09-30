@@ -263,7 +263,7 @@ export async function describeEc2Instance(instanceId: string, signal?: AbortSign
 export async function runEc2Instance(input: RunEc2InstanceInput): Promise<Ec2Instance> {
   const res = await apiClient.call<Ec2Instance>(
     apiEndpointKeys.aws.ec2.instances.create,
-    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { body: input },
   );
   return res.data;
 }
@@ -307,7 +307,7 @@ export async function updateEc2InstanceTags(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.instances.tags,
-    { body: JSON.stringify({ toAdd, toRemove }), headers: { "content-type": "application/json" } },
+    { body: { toAdd, toRemove } },
     { instanceId },
   );
 }
@@ -315,7 +315,7 @@ export async function updateEc2InstanceTags(
 export async function createEc2Ami(instanceId: string, input: CreateAmiInput): Promise<{ imageId: string }> {
   const res = await apiClient.call<{ imageId: string }>(
     apiEndpointKeys.aws.ec2.instances.createImage,
-    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { body: input },
     { instanceId },
   );
   return res.data;
@@ -347,7 +347,7 @@ export async function listEc2KeyPairs(signal?: AbortSignal): Promise<Ec2KeyPair[
 export async function createEc2KeyPair(name: string): Promise<Ec2KeyPairMaterial> {
   const res = await apiClient.call<Ec2KeyPairMaterial>(
     apiEndpointKeys.aws.ec2.keyPairs.create,
-    { body: JSON.stringify({ name }), headers: { "content-type": "application/json" } },
+    { body: { name } },
   );
   return res.data;
 }
@@ -369,9 +369,12 @@ export async function createEc2SecurityGroup(
   description: string,
   vpcId?: string,
 ): Promise<{ groupId: string }> {
-  const res = await apiClient.call<{ groupId: string }>(
+  const res = await apiClient.call<
+    { groupId: string },
+    { name: string; description: string; vpcId?: string }
+  >(
     apiEndpointKeys.aws.ec2.securityGroups.create,
-    { body: JSON.stringify({ name, description, vpcId }), headers: { "content-type": "application/json" } },
+    { body: { name, description, vpcId } },
   );
   return res.data;
 }
@@ -386,7 +389,7 @@ export async function authorizeEc2SecurityGroupIngress(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.securityGroups.authorize,
-    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { body: permission },
     { groupId },
   );
 }
@@ -397,7 +400,7 @@ export async function revokeEc2SecurityGroupIngress(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.securityGroups.revoke,
-    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { body: permission },
     { groupId },
   );
 }
@@ -408,7 +411,7 @@ export async function authorizeEc2SecurityGroupEgress(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.securityGroups.authorizeEgress,
-    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { body: permission },
     { groupId },
   );
 }
@@ -419,7 +422,7 @@ export async function revokeEc2SecurityGroupEgress(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.securityGroups.revokeEgress,
-    { body: JSON.stringify(permission), headers: { "content-type": "application/json" } },
+    { body: permission },
     { groupId },
   );
 }
@@ -437,7 +440,7 @@ export async function listEc2InstanceTypes(signal?: AbortSignal): Promise<Ec2Ins
 export async function modifyEc2SubnetAttribute(subnetId: string, mapPublicIpOnLaunch: boolean): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.subnets.modifyAttribute,
-    { body: JSON.stringify({ mapPublicIpOnLaunch }), headers: { "content-type": "application/json" } },
+    { body: { mapPublicIpOnLaunch } },
     { subnetId },
   );
 }
@@ -458,7 +461,7 @@ export async function modifyEc2VpcAttribute(
 ): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.vpcs.modifyAttribute,
-    { body: JSON.stringify({ attribute, value }), headers: { "content-type": "application/json" } },
+    { body: { attribute, value } },
     { vpcId },
   );
 }
@@ -469,7 +472,7 @@ export async function associateEc2ElasticIp(
 ): Promise<{ associationId: string }> {
   const res = await apiClient.call<{ associationId: string }>(
     apiEndpointKeys.aws.ec2.elasticIps.associate,
-    { body: JSON.stringify({ instanceId }), headers: { "content-type": "application/json" } },
+    { body: { instanceId } },
     { allocationId },
   );
   return res.data;
@@ -478,7 +481,7 @@ export async function associateEc2ElasticIp(
 export async function disassociateEc2ElasticIp(allocationId: string, associationId: string): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.elasticIps.disassociate,
-    { body: JSON.stringify({ associationId }), headers: { "content-type": "application/json" } },
+    { body: { associationId } },
     { allocationId },
   );
 }
@@ -491,7 +494,7 @@ export async function listEc2Vpcs(signal?: AbortSignal): Promise<Ec2Vpc[]> {
 export async function createEc2Vpc(cidrBlock: string): Promise<Ec2Vpc> {
   const res = await apiClient.call<Ec2Vpc>(
     apiEndpointKeys.aws.ec2.vpcs.create,
-    { body: JSON.stringify({ cidrBlock }), headers: { "content-type": "application/json" } },
+    { body: { cidrBlock } },
   );
   return res.data;
 }
@@ -515,7 +518,7 @@ export async function createEc2Subnet(
 ): Promise<Ec2Subnet> {
   const res = await apiClient.call<Ec2Subnet>(
     apiEndpointKeys.aws.ec2.subnets.create,
-    { body: JSON.stringify({ vpcId, cidrBlock, availabilityZone }), headers: { "content-type": "application/json" } },
+    { body: { vpcId, cidrBlock, availabilityZone } },
   );
   return res.data;
 }
@@ -532,7 +535,7 @@ export async function listEc2InternetGateways(signal?: AbortSignal): Promise<Ec2
 export async function createEc2InternetGateway(name?: string): Promise<Ec2InternetGateway> {
   const res = await apiClient.call<Ec2InternetGateway>(
     apiEndpointKeys.aws.ec2.internetGateways.create,
-    { body: JSON.stringify({ name }), headers: { "content-type": "application/json" } },
+    { body: { name } },
   );
   return res.data;
 }
@@ -540,7 +543,7 @@ export async function createEc2InternetGateway(name?: string): Promise<Ec2Intern
 export async function attachEc2InternetGateway(igwId: string, vpcId: string): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.internetGateways.attach,
-    { body: JSON.stringify({ vpcId }), headers: { "content-type": "application/json" } },
+    { body: { vpcId } },
     { igwId },
   );
 }
@@ -548,7 +551,7 @@ export async function attachEc2InternetGateway(igwId: string, vpcId: string): Pr
 export async function detachEc2InternetGateway(igwId: string, vpcId: string): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.internetGateways.detach,
-    { body: JSON.stringify({ vpcId }), headers: { "content-type": "application/json" } },
+    { body: { vpcId } },
     { igwId },
   );
 }
@@ -568,7 +571,7 @@ export async function listEc2NatGateways(vpcId?: string, signal?: AbortSignal): 
 export async function createEc2NatGateway(input: CreateNatGatewayInput): Promise<Ec2NatGateway> {
   const res = await apiClient.call<Ec2NatGateway>(
     apiEndpointKeys.aws.ec2.natGateways.create,
-    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { body: input },
   );
   return res.data;
 }
@@ -588,7 +591,7 @@ export async function listEc2RouteTables(vpcId?: string, signal?: AbortSignal): 
 export async function createEc2RouteTable(vpcId: string, name?: string): Promise<Ec2RouteTable> {
   const res = await apiClient.call<Ec2RouteTable>(
     apiEndpointKeys.aws.ec2.routeTables.create,
-    { body: JSON.stringify({ vpcId, name }), headers: { "content-type": "application/json" } },
+    { body: { vpcId, name } },
   );
   return res.data;
 }
@@ -600,7 +603,7 @@ export async function deleteEc2RouteTable(rtbId: string): Promise<void> {
 export async function createEc2Route(rtbId: string, input: CreateRouteInput): Promise<void> {
   await apiClient.call(
     apiEndpointKeys.aws.ec2.routeTables.createRoute,
-    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { body: input },
     { rtbId },
   );
 }
@@ -616,7 +619,7 @@ export async function deleteEc2Route(rtbId: string, cidr: string): Promise<void>
 export async function associateEc2RouteTable(rtbId: string, subnetId: string): Promise<string> {
   const res = await apiClient.call<{ associationId: string }>(
     apiEndpointKeys.aws.ec2.routeTables.associate,
-    { body: JSON.stringify({ subnetId }), headers: { "content-type": "application/json" } },
+    { body: { subnetId } },
     { rtbId },
   );
   return res.data.associationId;
@@ -634,7 +637,7 @@ export async function listEc2ElasticIps(signal?: AbortSignal): Promise<Ec2Elasti
 export async function allocateEc2ElasticIp(name?: string): Promise<Ec2ElasticIp> {
   const res = await apiClient.call<Ec2ElasticIp>(
     apiEndpointKeys.aws.ec2.elasticIps.create,
-    { body: JSON.stringify({ name }), headers: { "content-type": "application/json" } },
+    { body: { name } },
   );
   return res.data;
 }
@@ -646,7 +649,7 @@ export async function releaseEc2ElasticIp(allocationId: string): Promise<void> {
 export async function createVpcWizard(input: VpcWizardInput): Promise<VpcWizardResult> {
   const res = await apiClient.call<VpcWizardResult>(
     apiEndpointKeys.aws.ec2.vpcWizard,
-    { body: JSON.stringify(input), headers: { "content-type": "application/json" } },
+    { body: input },
   );
   return res.data;
 }
